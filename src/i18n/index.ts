@@ -49,9 +49,21 @@ function lookup(locale: Locale, key: string): string | undefined {
   return typeof node === 'string' ? node : undefined
 }
 
-/** Kääntää avaimen nykyiselle kielelle ja korvaa `{nimi}`-paikkamerkit params-arvoilla. */
-export function t(key: string, params?: Params): string {
-  const template = lookup(locales[current], key) ?? lookup(locales[FALLBACK_LANG], key) ?? key
+function interpolate(template: string, params?: Params): string {
   if (!params) return template
   return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match))
+}
+
+/** Kääntää avaimen nykyiselle kielelle ja korvaa `{nimi}`-paikkamerkit params-arvoilla. */
+export function t(key: string, params?: Params): string {
+  return interpolate(lookup(locales[current], key) ?? lookup(locales[FALLBACK_LANG], key) ?? key, params)
+}
+
+/**
+ * Kuten `t()`, mutta palauttaa null jos käännöstä ei ole. Kutsuja voi valita
+ * oman fallbackinsa — palakirjastossa se on palan tunnus (R8).
+ */
+export function tOptional(key: string, params?: Params): string | null {
+  const template = lookup(locales[current], key) ?? lookup(locales[FALLBACK_LANG], key)
+  return template === undefined ? null : interpolate(template, params)
 }

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "N",
+    "kind": "ramp",
+    "lengthMm": 216,
+    "riseMm": 64,
+    "tags": ["ramp", "basic"],
+    "source": "README luku 2: tasoero 64 mm / 216 mm matkalla; N kuuluu 216 mm:n korvausluokkaan"
+  },
+  {
+    "id": "DECK144",
+    "kind": "straight",
+    "lengthMm": 144,
+    "minLevel": 1,
+    "tags": ["bridge-deck"],
+    "notes": "Kuvaileva tunnus: README antaa kansien pituudet (=A) muttei BRIO:n kirjainkoodia.",
+    "source": "README luku 2: sillat, kannet 144 (=A)"
+  },
+  {
+    "id": "DECK216",
+    "kind": "straight",
+    "lengthMm": 216,
+    "minLevel": 1,
+    "tags": ["bridge-deck"],
+    "notes": "Kuvaileva tunnus: README antaa kansien pituudet (=D) muttei BRIO:n kirjainkoodia.",
+    "source": "README luku 2: sillat, kannet 216 (=D)"
+  },
+  {
+    "id": "DECK324",
+    "kind": "straight",
+    "lengthMm": 324,
+    "minLevel": 1,
+    "tags": ["bridge-deck"],
+    "notes": "Kuvaileva tunnus: README antaa kansien pituudet (=A1+D) muttei BRIO:n kirjainkoodia.",
+    "source": "README luku 2: sillat, kannet 324 (=A1+D)"
+  },
+  {
+    "id": "DECK360",
+    "kind": "straight",
+    "lengthMm": 360,
+    "minLevel": 1,
+    "tags": ["bridge-deck"],
+    "notes": "Kuvaileva tunnus: README antaa kansien pituudet (=A+D) muttei BRIO:n kirjainkoodia.",
+    "source": "README luku 2: sillat, kannet 360 (=A+D)"
+  }
+]

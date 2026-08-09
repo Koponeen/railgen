@@ -1,0 +1,26 @@
+[
+  {
+    "id": "E",
+    "kind": "curve",
+    "radiusMm": 202,
+    "innerRadiusMm": 182,
+    "sweepDeg": 45,
+    "hand": "right",
+    "varioFactor": 1.5,
+    "mirrorable": true,
+    "tags": ["curve", "basic"],
+    "source": "README luku 2: E sisäsäde 182 mm, keskilinja ~202 mm, aina 45°"
+  },
+  {
+    "id": "E1",
+    "kind": "curve",
+    "radiusMm": 110,
+    "innerRadiusMm": 90,
+    "sweepDeg": 45,
+    "hand": "right",
+    "varioFactor": 1.5,
+    "mirrorable": true,
+    "tags": ["curve", "basic", "tight"],
+    "source": "README luku 2: E1 sisäsäde 90 mm, keskilinja ~110 mm, aina 45°"
+  }
+]

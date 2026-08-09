@@ -16,5 +16,19 @@
     },
     "summary": "tila: {mode} · zoom: {zoom} · viivoja: {count}",
     "selected": "valittu"
+  },
+  "piece": {
+    "A2": { "name": "Suora 54 mm" },
+    "A3": { "name": "Suora 72 mm" },
+    "A1": { "name": "Suora 108 mm" },
+    "A": { "name": "Suora 144 mm" },
+    "D": { "name": "Suora 216 mm" },
+    "E": { "name": "Kaari 45° (iso)" },
+    "E1": { "name": "Kaari 45° (pieni)" },
+    "N": { "name": "Ramppi" },
+    "DECK144": { "name": "Sillan kansi 144 mm" },
+    "DECK216": { "name": "Sillan kansi 216 mm" },
+    "DECK324": { "name": "Sillan kansi 324 mm" },
+    "DECK360": { "name": "Sillan kansi 360 mm" }
   }
 }

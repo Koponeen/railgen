@@ -1,0 +1,37 @@
+[
+  {
+    "id": "A2",
+    "kind": "straight",
+    "lengthMm": 54,
+    "tags": ["straight", "basic"],
+    "source": "README luku 2 (woodenrailway.info Track Guide)"
+  },
+  {
+    "id": "A3",
+    "kind": "straight",
+    "lengthMm": 72,
+    "tags": ["straight", "rare"],
+    "source": "README luku 2: harvinainen A3 = 72 mm"
+  },
+  {
+    "id": "A1",
+    "kind": "straight",
+    "lengthMm": 108,
+    "tags": ["straight", "basic"],
+    "source": "README luku 2 (woodenrailway.info Track Guide)"
+  },
+  {
+    "id": "A",
+    "kind": "straight",
+    "lengthMm": 144,
+    "tags": ["straight", "basic"],
+    "source": "README luku 2 (woodenrailway.info Track Guide)"
+  },
+  {
+    "id": "D",
+    "kind": "straight",
+    "lengthMm": 216,
+    "tags": ["straight", "basic"],
+    "source": "README luku 2 (woodenrailway.info Track Guide)"
+  }
+]

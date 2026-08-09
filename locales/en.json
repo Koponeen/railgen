@@ -16,5 +16,19 @@
     },
     "summary": "mode: {mode} · zoom: {zoom} · lines: {count}",
     "selected": "selected"
+  },
+  "piece": {
+    "A2": { "name": "Straight 54 mm" },
+    "A3": { "name": "Straight 72 mm" },
+    "A1": { "name": "Straight 108 mm" },
+    "A": { "name": "Straight 144 mm" },
+    "D": { "name": "Straight 216 mm" },
+    "E": { "name": "Curve 45° (large)" },
+    "E1": { "name": "Curve 45° (small)" },
+    "N": { "name": "Ramp" },
+    "DECK144": { "name": "Bridge deck 144 mm" },
+    "DECK216": { "name": "Bridge deck 216 mm" },
+    "DECK324": { "name": "Bridge deck 324 mm" },
+    "DECK360": { "name": "Bridge deck 360 mm" }
   }
 }
