@@ -28,7 +28,7 @@ Nämä käytiin läpi ennen toteutusta, jotta niitä ei ratkota lennossa keskell
 
 ## 2. Tekniset valinnat
 
-- **TypeScript + Vite, ei UI-frameworkia.** Sovelluksen tila on pieni (inventaario, asetukset, geometriadata), piirto on suoraa SVG-DOM:ia ja README:n elemalli rakentuu Pointer Events -rajapinnalle. Runtime-riippuvuudet pidetään nollassa; jos UI-tila kasvaa hallitsemattomaksi, Preact on varasuunnitelma (arvioidaan aikaisintaan vaiheessa 4).
+- **TypeScript + Vite + Preact.** Preact (~4 kt) omistaa UI-kromin: sivut, lomakkeet, inventaariolistat, osaluettelot, toimintorivit, palamuutoskortit. **SVG-kartta ja ele-engine ovat Preactin ulkopuolella** — oma imperatiivinen saareke (Pointer Events + CSS-transform suoraan, ei virtuaali-DOM-diffiä elesilmukassa), jolle Preact antaa vain propsit ja callbackit. Muita runtime-riippuvuuksia ei oteta.
 - **Vitest** yksikkötesteihin (geometria, budjetti, determinismi, solver-täyttö).
 - **Cloudflare Workers static assets** + wrangler; deploy GitHub-integraatiolla.
 - **Oma kevyt i18n-moduuli** (~50 riviä): JSON-lokaalit, `t(key, params)`-interpolointi, kielen valinta `?lang=` → localStorage → `navigator.language` → `fi`. Ei i18next-riippuvuutta.
@@ -53,6 +53,14 @@ docs/
   IMPLEMENTATION_PLAN.md
 ```
 
+### UI-linjaukset (sitovat)
+
+1. **Ei komponenttikirjastoa.** Tarvittavat komponentit (napit, stepperit, checkboxit, kortit, alapalkki) tehdään itse; tyylit modernilla vanilla-CSS:llä (custom properties, nesting). Komponenttikirjastot tuovat työpöytäoletuksia ja painoa.
+2. **Kartta on sankari.** Sivuilla 3–4 kromi minimiin: koko ruutu karttaa, toimintorivi alalaidassa peukalon ulottuvilla. Epäselvyydet ratkaistaan haamuesikatseluina kartalla, ei dialogeina (README §6).
+3. **Sormimitoitus**: kaikki kosketuskohteet ≥ 44 px. Numerosyötöt +/−-steppereinä, ei pieninä tekstikenttinä. Sivunavigointi isoilla välilehdillä alareunassa.
+4. **Visuaalinen kieli puulelusta**: vaalea pohja, radat laudanvärisinä (lämmin beige + urat), aksenttivärinä BRIO-punainen. Tumma tila `prefers-color-scheme`-perusteisesti custom propertyillä alusta asti.
+5. **Yksi näkymä = yksi tehtävä**: ensikäytössä lineaarinen polku sivut 1→2→3→4; kun localStoragessa on asetukset, palataan suoraan sivulle 3.
+
 ### i18n-säännöt (sitovat)
 
 1. Yhtään käyttäjälle näkyvää merkkijonoa ei kirjoiteta koodiin — kaikki `t()`-avaimien kautta.
@@ -71,8 +79,9 @@ Mallijako: **Opus** tekee algoritmisesti kriittisen ja virheherkän työn (geome
 
 README §10 kohta 0: "jos tämä ei tunnu hyvältä, mikään ei pelasta."
 
-- Vite + TS + Vitest -pohja, wrangler-konfiguraatio, deploy toimimaan asti.
+- Vite + TS + Preact + Vitest -pohja, wrangler-konfiguraatio, deploy toimimaan asti.
 - Ele-engine: Pointer Events, `pointerId`-seuranta, kaksi sormea navigoi aina, napautus/veto-erottelu (<8 px, <300 ms), piirtotilan stubi (raaka viiva näkyviin, toinen sormi peruu), `touch-action: none` kartalle, zoom/pan CSS-transformilla eleen aikana.
+- Kartta–Preact-rajapinta lyödään lukkoon tässä vaiheessa: kartta imperatiivisena saarekkeena, Preact-kromi sen ympärillä (props/callbackit).
 - Tyhjä SVG-kartta + i18n-moduuli + `fi.json`/`en.json`-rungot.
 - **Valmis kun**: omistaja on testannut eleet omalla puhelimellaan deploysta.
 - **Commit**: `Scaffold app shell with gesture engine, i18n and CF deploy`
