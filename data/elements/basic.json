@@ -1,0 +1,76 @@
+[
+  {
+    "id": "through-d",
+    "role": "through",
+    "steps": [{ "piece": "D" }],
+    "notes": "Yksi loginen solu yhdellä palalla."
+  },
+  {
+    "id": "through-2a1",
+    "role": "through",
+    "steps": [{ "piece": "A1" }, { "piece": "A1" }]
+  },
+  {
+    "id": "through-4a2",
+    "role": "through",
+    "steps": [{ "piece": "A2" }, { "piece": "A2" }, { "piece": "A2" }, { "piece": "A2" }]
+  },
+  {
+    "id": "through-3a",
+    "role": "through",
+    "steps": [{ "piece": "A" }, { "piece": "A" }, { "piece": "A" }],
+    "notes": "432 mm = perhesovitus: sama matka kuin 2 x D."
+  },
+  {
+    "id": "corner-e",
+    "role": "turn",
+    "steps": [{ "piece": "E" }, { "piece": "E" }],
+    "notes": "90 asteen kulma isolla säteellä; vie 202 x 202 mm."
+  },
+  {
+    "id": "corner-e1",
+    "role": "turn",
+    "steps": [{ "piece": "E1" }, { "piece": "E1" }],
+    "notes": "Ahdas kulma; mahtuu puoleen soluun."
+  },
+  {
+    "id": "corner-e-a2-e",
+    "role": "turn",
+    "steps": [{ "piece": "E" }, { "piece": "A2" }, { "piece": "E" }],
+    "notes": "Venytetty kulma (README luku 2): viistosuora kaarien välissä venyttää sädettä."
+  },
+  {
+    "id": "corner-e-a1-e",
+    "role": "turn",
+    "steps": [{ "piece": "E" }, { "piece": "A1" }, { "piece": "E" }]
+  },
+  {
+    "id": "corner-e1-a2-e1",
+    "role": "turn",
+    "steps": [{ "piece": "E1" }, { "piece": "A2" }, { "piece": "E1" }]
+  },
+  {
+    "id": "uturn-e",
+    "role": "uturn",
+    "steps": [{ "piece": "E" }, { "piece": "E" }, { "piece": "E" }, { "piece": "E" }]
+  },
+  {
+    "id": "uturn-e1",
+    "role": "uturn",
+    "steps": [{ "piece": "E1" }, { "piece": "E1" }, { "piece": "E1" }, { "piece": "E1" }]
+  },
+  {
+    "id": "hill-d",
+    "role": "hill",
+    "steps": [{ "piece": "N" }, { "piece": "DECK216" }, { "piece": "N", "reverse": true }],
+    "connectorPolicy": "flexible",
+    "notes": "Mäki: ramppi ylös, kansi, ramppi alas. 648 mm. Laskeva ramppi kuljetaan yläpäästä sisään, joten liittimen sukupuoli vaatii käännön/adapterin — BRIO:n ramppien liitinsukupuolia ei ole voitu tarkistaa lähteestä (ks. docs/PIECE_LIBRARY.md)."
+  },
+  {
+    "id": "hill-a",
+    "role": "hill",
+    "steps": [{ "piece": "N" }, { "piece": "DECK144" }, { "piece": "N", "reverse": true }],
+    "connectorPolicy": "flexible",
+    "notes": "Lyhyempi mäki, 576 mm."
+  }
+]

@@ -101,11 +101,17 @@ export function toSvgPath(segments: readonly Segment[]): string {
   return parts.join(' ')
 }
 
-/** Näytteistää keskilinjan pisteiksi; kaaret jaetaan noin 5°:n askeliin. */
-export function samplePath(segments: readonly Segment[]): Vec[] {
+/**
+ * Näytteistää keskilinjan pisteiksi. Suorat jaetaan `maxStepMm`:n välein ja
+ * kaaret vähintään 5°:n askeliin, jotta törmäystarkistus ei ohita keskikohtia.
+ */
+export function samplePath(segments: readonly Segment[], maxStepMm = 30): Vec[] {
   const points: Vec[] = []
   for (const segment of segments) {
-    const steps = segment.type === 'line' ? 1 : Math.max(2, Math.ceil(Math.abs(segment.sweepDeg) / 5))
+    const steps =
+      segment.type === 'line'
+        ? Math.max(1, Math.ceil(segmentLength(segment) / maxStepMm))
+        : Math.max(2, Math.ceil(Math.abs(segment.sweepDeg) / 5), Math.ceil(segmentLength(segment) / maxStepMm))
     for (let i = 0; i <= steps; i += 1) {
       const point = segmentPoint(segment, i / steps)
       const previous = points[points.length - 1]

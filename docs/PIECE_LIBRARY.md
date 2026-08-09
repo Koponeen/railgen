@@ -97,6 +97,19 @@ yhden datarivin työ, kun mitat on tarkistettu — koodimuutoksia ei tarvita.
 | `O`, `P` | E1-luokka, README sanoo "= 2×E1" |
 | Taipuva pala | pituushaarukka ja maksimitaivutus omistajan 3D-tulosteesta (parametrit ovat dataa, ks. `FlexSettings`) |
 | IKEA Lillabo -osat | mitat |
+| `N`-rampin liitinsukupuolet | onko ramppeja olemassa sukupuolitettuna parina (nouseva/laskeva)? Ks. alla. |
+
+### Rampin liitinsukupuoli
+
+`N` on mallinnettu tavalliseksi kolo → tappi -palaksi, joka nousee yhden tason. Laskeva
+ramppi on sama pala kuljettuna yläpäästä sisään, mikä kääntää liittimen sukupuolen.
+Suljetussa silmukassa se rikkoo kaksi liitosta (ks. `docs/GENERATION.md`), joten mäki
+vaatii asetuksen "salli kääntö/adapterit".
+
+Jos BRIO:lla on erillinen laskeva ramppi omalla liitinjärjestyksellään, se on yksi
+datarivi (`kind: "ramp"`, `riseMm: -64`) ja mäki toimii ilman asetusta.
+
+`DECK*`-kansien liitinsukupuolet ovat samasta syystä oletuksia, eivät tarkistettuja.
 
 Ennen kuin nämä ovat mukana, generaattorin haara- ja X-risteysmutaatiot hylkäävät itsensä
 siististi ("signatuurille ei ole toteutusta") — runko pysyy silti ehjänä.

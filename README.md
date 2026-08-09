@@ -220,8 +220,20 @@ Jokainen vaihe on itsenäisesti julkaistava.
 
 ## Kehitys
 
-Vaihe 0 (elerunko + infra, ks. `docs/IMPLEMENTATION_PLAN.md`) on toteutettu: Vite + TypeScript +
-Preact -pohja, oma i18n-moduuli (`locales/fi.json` on referenssi), Vitest ja Cloudflare-julkaisu.
+Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
+
+- **Vaihe 0** (elerunko + infra): Vite + TypeScript + Preact -pohja, oma i18n-moduuli
+  (`locales/fi.json` on referenssi), Vitest ja Cloudflare-julkaisu.
+- **Vaihe 1a** (geometriaydin): `src/core/` — portit ja porttisignatuurit, kolmitasoinen
+  palakirjasto datana (`data/pieces/`), Vario-toleranssibudjetti, siemenpohjainen PRNG ja
+  Solver-täyttö inventaariorajoittein. Ks. `docs/PIECE_LIBRARY.md`.
+- **Vaihe 1b** (generointiputki): `src/gen/` — aluemaski, solureitti, runko ja
+  sulkeutumisen ratkaisu, elementtikirjasto datana (`data/elements/`), mutaatiot ja
+  ehdokkaiden pisteytys. Ks. `docs/GENERATION.md`.
+
+Vaiheet 1a ja 1b eivät vielä näy käyttöliittymässä — sivut tulevat vaiheessa 1c.
+Vaihteiden ja risteysten mitat odottavat tarkistusta lähteestä; siihen asti haara- ja
+risteysmutaatiot hylkäävät itsensä siististi (`docs/PIECE_LIBRARY.md`).
 
 ```
 npm install
