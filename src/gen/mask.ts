@@ -75,3 +75,28 @@ export function cellCenter(mask: CellMask, col: number, row: number): Vec {
 export function areaBounds(mask: CellMask): { minX: number; minY: number; maxX: number; maxY: number } {
   return { minX: 0, minY: 0, maxX: mask.areaWidthMm, maxY: mask.areaDepthMm }
 }
+
+/**
+ * Alueen ääriviiva myötäpäivään: suorakaide tai L (suorakaide miinus nurkka).
+ * Sekä kartan piirto että osion sivutilan mittaus katsovat tätä samaa muotoa.
+ */
+export function areaOutline(area: AreaShape): Vec[] {
+  const { widthMm: w, depthMm: d } = area
+  if (area.kind === 'rect') {
+    return [
+      { x: 0, y: 0 },
+      { x: w, y: 0 },
+      { x: w, y: d },
+      { x: 0, y: d },
+    ]
+  }
+  const west = area.corner === 'nw' || area.corner === 'sw'
+  const north = area.corner === 'nw' || area.corner === 'ne'
+  const x0 = west ? area.cutWidthMm : w - area.cutWidthMm
+  const y0 = north ? area.cutDepthMm : d - area.cutDepthMm
+
+  if (north && !west) return [{ x: 0, y: 0 }, { x: x0, y: 0 }, { x: x0, y: y0 }, { x: w, y: y0 }, { x: w, y: d }, { x: 0, y: d }]
+  if (north && west) return [{ x: x0, y: 0 }, { x: w, y: 0 }, { x: w, y: d }, { x: 0, y: d }, { x: 0, y: y0 }, { x: x0, y: y0 }]
+  if (!north && !west) return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: y0 }, { x: x0, y: y0 }, { x: x0, y: d }, { x: 0, y: d }]
+  return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: d }, { x: x0, y: d }, { x: x0, y: y0 }, { x: 0, y: y0 }]
+}

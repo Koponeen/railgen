@@ -106,6 +106,24 @@
       "self-collision": "Rata osuisi itseensä. Risteävät radat tulevat myöhemmin."
     }
   },
+  "section": {
+    "brief": "{length} cm · {pieces} palaa · sivutilaa vas. {left} cm, oik. {right} cm",
+    "freed": "Purkaminen vapauttaa {pieces}.",
+    "draw": "Piirrä tilalle",
+    "drawHint": "Piirrä osion tilalle uusi muoto. Päät pysyvät paikallaan.",
+    "clear": "Poista valinta",
+    "notReplaceable": "Tätä osiota ei voi korvata piirtämällä.",
+    "replaced": "Osio korvattu: {pieces} palaa · rata {length} m · poikkeama {deviation} mm",
+    "failure": {
+      "unknown": "Osiota ei voitu korvata.",
+      "section-not-replaceable": "Tätä osiota ei voi korvata: sen keskeltä lähtee haara tai se kattaa koko radan.",
+      "drawing-too-short": "Viiva on liian lyhyt. Piirrä osion päästä päähän.",
+      "no-fit": "Viivalle ei löytynyt palayhdistelmää, joka päättyisi osion loppuporttiin. Kokeile loivempaa muotoa.",
+      "ends-beyond-budget": "Muoto ei ylety päätyportteihin. Kokeile loivempaa muotoa tai venytä valintaa kahvoista.",
+      "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Piirrä loivempi muoto.",
+      "self-collision": "Uusi osuus osuisi muuhun rataan. Piirrä se toiselle puolelle."
+    }
+  },
   "result": {
     "title": "Rata",
     "empty": "Generoi ensin rata.",

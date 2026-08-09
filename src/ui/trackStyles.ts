@@ -49,6 +49,8 @@ function rules(palette: TrackPalette): string {
 .piece-buffer { stroke: ${palette.accent}; stroke-width: 7; stroke-linecap: round; }
 .piece.selected .piece-board { stroke: ${palette.accent}; }
 .piece.selected .piece-groove { stroke: ${palette.floor}; opacity: 0.5; }
+.handle-hit { fill: transparent; pointer-events: fill; cursor: grab; }
+.handle-knob { fill: ${palette.floor}; stroke: ${palette.accent}; stroke-width: var(--handle-stroke, 10); pointer-events: none; }
 .line.draft { fill: none; stroke: ${palette.accent}; stroke-width: 6; stroke-dasharray: 4 14; stroke-linecap: round; }
 .line.guide { fill: none; stroke: ${palette.accent}; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }
 `

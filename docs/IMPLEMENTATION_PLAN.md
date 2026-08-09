@@ -46,11 +46,13 @@ src/
   core/            # geometry, ports, transforms, vario budget, rng
   gen/             # area mask, cell route, element pick, mutations, scoring
   fit/             # drawing cleanup (RDP) + beam-search fit
+  edit/            # section selection, end handles, replace by drawing
   render/          # SVG from geometry, PNG export
   ui/              # pages, gesture engine, ghost previews
   i18n/            # loader + t()
 docs/
   IMPLEMENTATION_PLAN.md
+  PIECE_LIBRARY.md GENERATION.md UI.md DRAWING.md EDITING.md
 ```
 
 ### UI-linjaukset (sitovat)
@@ -117,6 +119,7 @@ README §10 kohta 0: "jos tämä ei tunnu hyvältä, mikään ei pelasta."
 ### Vaihe 3 — Osion korvaus piirtämällä *(Opus)*
 
 - Luonnollisen jakson valinta, liukuvat päätykahvat, sovitus kiinnitetyillä päätyporteilla, purkautuvat palat inventaarioon.
+- Toimintorivistä toteutetaan vain **Piirrä tilalle**; "Vaihtoehdot" ja "Poista" ovat vaiheen 5 autosolveria.
 - **Commit**: `Add section replacement by drawing`
 
 ### Vaihe 4 — Lisäävä piirto + haara-/risteämiskyselyt *(Opus-logiikka, Sonnet-haamuesikatselut)*

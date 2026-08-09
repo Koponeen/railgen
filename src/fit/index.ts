@@ -1,4 +1,4 @@
-export { beamFit, fitOptions, DEFAULT_TUNING, type BeamFit, type FitOption, type FitTuning } from './beam'
+export { beamFit, fitOptions, DEFAULT_TUNING, type BeamFit, type FitOption, type FitTuning, type GoalFrame } from './beam'
 export { fitDrawing, type FitOptions, type FitReason, type FitResult } from './fit'
 export {
   cleanDrawing,

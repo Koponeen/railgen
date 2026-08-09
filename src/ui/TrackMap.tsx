@@ -3,7 +3,7 @@ import type { PieceLibrary } from '../core/library'
 import type { Track } from '../gen/build'
 import type { AreaShape } from '../gen/mask'
 import { mountMapEngine, type MapEngineHandle, type MapEngineSnapshot } from './mapEngine'
-import type { Mode, Point } from './state'
+import type { HandleId, Mode, Point, SectionHandles } from './state'
 import { screenTrackCss } from './trackStyles'
 
 interface TrackMapProps {
@@ -14,28 +14,51 @@ interface TrackMapProps {
   mode?: Mode
   /** Piirretty viiva haaleana radan alla. */
   guide?: readonly Point[] | null
-  onSelect?: (snapshot: MapEngineSnapshot) => void
+  /** Korostettava osio radan `pieces`-indekseinä. */
+  selection?: readonly number[] | null
+  /** Osion liukuvat päätykahvat. */
+  handles?: SectionHandles | null
+  /** Pieni tunnus kartan kulmassa, esim. valitun osion mitta. */
+  badge?: string | null
+  onChange?: (snapshot: MapEngineSnapshot) => void
   onDraw?: (points: Point[]) => void
+  onTapPiece?: (index: number | null) => void
+  onHandleMove?: (handle: HandleId, point: Point) => void
+  onHandleEnd?: () => void
   /** Antaa juuri-SVG:n ulos vientiä varten. */
   svgRef?: { current: SVGSVGElement | null }
 }
 
 /**
  * Preact-kääre imperatiiviselle kartalle. Preact ei koskaan renderöi kartan
- * sisältöä uudelleen — se antaa vain alueen ja radan moottorille.
+ * sisältöä uudelleen — se antaa vain sisällön ja callbackit moottorille.
  */
-export function TrackMap({ area, track, library, mode = 'view', guide, onSelect, onDraw, svgRef }: TrackMapProps) {
+export function TrackMap({
+  area,
+  track,
+  library,
+  mode = 'view',
+  guide,
+  selection,
+  handles,
+  badge,
+  onChange,
+  onDraw,
+  onTapPiece,
+  onHandleMove,
+  onHandleEnd,
+  svgRef,
+}: TrackMapProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const localSvgRef = useRef<SVGSVGElement>(null)
   const worldRef = useRef<SVGGElement>(null)
   const engineRef = useRef<MapEngineHandle | null>(null)
-  const [selection, setSelection] = useState<MapEngineSnapshot | null>(null)
   const [rotated, setRotated] = useState(false)
 
   // Moottori mountataan kerran, mutta callbackit vaihtuvat joka renderillä:
   // ref pitää kartan kutsumassa aina tuoreinta, ei mounttihetken versiota.
-  const handlers = useRef({ onSelect, onDraw })
-  handlers.current = { onSelect, onDraw }
+  const handlers = useRef({ onChange, onDraw, onTapPiece, onHandleMove, onHandleEnd })
+  handlers.current = { onChange, onDraw, onTapPiece, onHandleMove, onHandleEnd }
 
   // Pyöritys on vain esitystason asia (README luku 7): pystyssä olevalla
   // puhelimella vaakasuuntainen lattia kääntyy neljänneskierroksen, jolloin se
@@ -60,14 +83,22 @@ export function TrackMap({ area, track, library, mode = 'view', guide, onSelect,
       localSvgRef.current,
       worldRef.current,
       library,
-      { area, track, guide },
+      { area, track, guide, selection, handles },
       {
         onChange(snapshot) {
-          setSelection(snapshot)
-          handlers.current.onSelect?.(snapshot)
+          handlers.current.onChange?.(snapshot)
         },
         onDraw(points) {
           handlers.current.onDraw?.(points)
+        },
+        onTapPiece(index) {
+          handlers.current.onTapPiece?.(index)
+        },
+        onHandleMove(handle, point) {
+          handlers.current.onHandleMove?.(handle, point)
+        },
+        onHandleEnd() {
+          handlers.current.onHandleEnd?.()
         },
       },
     )
@@ -76,13 +107,13 @@ export function TrackMap({ area, track, library, mode = 'view', guide, onSelect,
       engine.destroy()
       engineRef.current = null
     }
-    // Moottori mountataan kerran; alue, rata ja tila päivitetään erikseen.
+    // Moottori mountataan kerran; sisältö ja tila päivitetään erikseen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [library])
 
   useEffect(() => {
-    engineRef.current?.update({ area, track, guide })
-  }, [area, track, guide])
+    engineRef.current?.update({ area, track, guide, selection, handles })
+  }, [area, track, guide, selection, handles])
 
   useEffect(() => {
     engineRef.current?.setMode(mode)
@@ -103,7 +134,7 @@ export function TrackMap({ area, track, library, mode = 'view', guide, onSelect,
           <g id="world" ref={worldRef} />
         </g>
       </svg>
-      {selection?.selectedPieceId ? <div class="map-badge">{selection.selectedPieceId}</div> : null}
+      {badge ? <div class="map-badge">{badge}</div> : null}
     </div>
   )
 }

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { defaultLibrary } from '../core/library'
 import { seedFromInput, seedToString } from '../core/rng'
+import { naturalSection, replaceSection, sectionBrief, slideSectionEnd } from '../edit'
 import { fitDrawing } from '../fit'
 import { generate, type GenerateResult } from '../gen/generate'
 import { t } from '../i18n'
-import type { DrawingState } from './drawing'
-import type { Point } from './state'
+import { handlesOf, type DrawingState, type EditState, type SectionState } from './drawing'
+import type { HandleId, Point } from './state'
 import { AreaPage } from './pages/AreaPage'
 import { GeneratePage } from './pages/GeneratePage'
 import { InventoryPage } from './pages/InventoryPage'
@@ -28,8 +29,8 @@ function randomSeed(): string {
 }
 
 /**
- * Sovelluksen juuri: sivut 1, 2, 3-minimi ja 4. Preact omistaa kromin,
- * kartta on imperatiivinen saareke sen sisällä.
+ * Sovelluksen juuri: sivut 1, 2, 3 ja 4. Preact omistaa kromin, kartta on
+ * imperatiivinen saareke sen sisällä.
  *
  * Ensikäytössä lineaarinen polku 1 -> 2 -> 3 -> 4; kun localStoragessa on
  * asetukset, palataan suoraan sivulle 3 (UI-linjaus 5).
@@ -51,9 +52,12 @@ export function App() {
   const [busy, setBusy] = useState(false)
   const pendingRef = useRef<number | null>(null)
 
-  // Piirretty rata syrjäyttää generoidun, kunnes käyttäjä generoi uudelleen tai
-  // muuttaa asetuksia. Molemmat elävät rinnakkain, joten paluu on aina auki.
+  // Piirretty ja käsin muokattu rata syrjäyttävät generoidun, kunnes käyttäjä
+  // generoi uudelleen tai muuttaa asetuksia. Kaikki elävät rinnakkain, joten
+  // paluu on aina auki.
   const [drawing, setDrawing] = useState<DrawingState | null>(null)
+  const [edited, setEdited] = useState<EditState | null>(null)
+  const [section, setSection] = useState<SectionState | null>(null)
   const [drawMode, setDrawMode] = useState(false)
 
   useEffect(() => {
@@ -88,37 +92,99 @@ export function App() {
     if (page === 'generate' || page === 'result') run(seed)
   }, [page, seed, run])
 
-  /** Sovitus on synkronista ja nopeaa, joten se ajetaan suoraan sormen noustessa. */
+  const winner = result?.winner ?? null
+  const track = edited?.track ?? drawing?.result.track ?? winner?.track ?? null
+
+  /** Osion valinta ja sen tehtävänanto samasta paikasta, myös kahvaa vedettäessä. */
+  const selectSection = useCallback(
+    (next: SectionState['section'] | null, failure: SectionState['failure'] = null) => {
+      if (!next || !track) {
+        setSection(null)
+        return
+      }
+      setSection({ section: next, brief: sectionBrief(track, library, settings.area, next), handles: handlesOf(next), failure })
+    },
+    [track, library, settings.area],
+  )
+
+  const handleTapPiece = useCallback(
+    (index: number | null) => {
+      setDrawMode(false)
+      if (index === null || !track) {
+        setSection(null)
+        return
+      }
+      selectSection(naturalSection(track, library, index))
+    },
+    [track, library, selectSection],
+  )
+
+  /** Päätykahva napsahtaa lähimpään palarajaan sormen alla (README luku 6). */
+  const handleHandleMove = useCallback(
+    (handle: HandleId, point: Point) => {
+      if (!section || !track) return
+      const next = slideSectionEnd(track, library, section.section, handle, point)
+      if (next.indices.join() === section.section.indices.join()) return
+      selectSection(next)
+    },
+    [section, track, library, selectSection],
+  )
+
+  /**
+   * Sovitus on synkronista ja nopeaa, joten se ajetaan suoraan sormen noustessa.
+   * Valittu osio ohjaa vedon korvaukseksi; ilman valintaa veto on uusi rata.
+   */
   const handleDraw = useCallback(
     (points: Point[]) => {
       setDrawMode(false)
-      setDrawing({
-        points,
-        result: fitDrawing(points, {
-          area: settings.area,
-          library,
-          inventory: toInventory(settings),
-          flex: toFlexSettings(settings),
-        }),
-      })
+      const options = {
+        area: settings.area,
+        library,
+        inventory: toInventory(settings),
+        flex: toFlexSettings(settings),
+      }
+
+      if (section && track) {
+        const replacement = replaceSection(track, section.section, points, options)
+        if (!replacement.track) {
+          selectSection(section.section, replacement.reason)
+          return
+        }
+        // Osion indeksit viittaavat vanhaan rataan, joten valinta puretaan.
+        setSection(null)
+        setEdited({
+          track: replacement.track,
+          pieceCount: replacement.pieceCount,
+          deviationMm: replacement.deviation.meanMm,
+          withinInventory: replacement.withinInventory,
+        })
+        return
+      }
+
+      setEdited(null)
+      setDrawing({ points, result: fitDrawing(points, options) })
     },
-    [settings, library],
+    [settings, library, section, track, selectSection],
   )
 
-  // Asetusten muutos mitätöi piirretyn radan: se on sovitettu vanhaan alueeseen
-  // ja vanhaan inventaarioon.
-  const patch = (next: Partial<AppSettings>) => {
+  /** Asetusten tai siemenen muutos mitätöi kaiken käsityön: se on tehty vanhaan rataan. */
+  const resetEdits = () => {
     setDrawing(null)
+    setEdited(null)
+    setSection(null)
+    setDrawMode(false)
+  }
+
+  const patch = (next: Partial<AppSettings>) => {
+    resetEdits()
     setSettings((current) => ({ ...current, ...next }))
   }
 
   const startOver = (nextSeed: string) => {
-    setDrawing(null)
+    resetEdits()
     setSeed(nextSeed)
   }
 
-  const winner = result?.winner ?? null
-  const track = drawing?.result.track ?? winner?.track ?? null
   const seedLabel = useMemo(() => seedToString(seedFromInput(seed)), [seed])
 
   return (
@@ -135,8 +201,12 @@ export function App() {
             seedLabel={seed}
             drawMode={drawMode}
             drawing={drawing}
+            edited={edited}
+            section={section}
             onDrawModeChange={setDrawMode}
             onDraw={handleDraw}
+            onTapPiece={handleTapPiece}
+            onHandleMove={handleHandleMove}
             onSeedChange={startOver}
             onRegenerate={() => startOver(randomSeed())}
             onShowResult={() => setPage('result')}
@@ -149,7 +219,7 @@ export function App() {
             track={track}
             settings={settings}
             seedLabel={seedLabel}
-            drawn={drawing?.result.track != null}
+            drawn={drawing?.result.track != null || edited != null}
           />
         ) : null}
       </main>

@@ -1,10 +1,9 @@
 import { t } from '../../i18n'
 import { formatCm } from '../../i18n/format'
-import type { AreaShape } from '../../gen/mask'
+import { areaOutline, type AreaShape } from '../../gen/mask'
 import { CELL_MM } from '../../core/units'
 import { Card, Choice, Page, Stepper } from '../components'
 import { AREA_MAX_MM, AREA_MIN_MM, AREA_STEP_MM, QUICK_SIZES, normalizeArea } from '../settings'
-import { areaOutlinePoints } from '../trackSvg'
 
 interface AreaPageProps {
   area: AreaShape
@@ -125,7 +124,7 @@ export function AreaPage({ area, onChange }: AreaPageProps) {
 }
 
 function AreaPreview({ area }: { area: AreaShape }) {
-  const points = areaOutlinePoints(area)
+  const points = areaOutline(area)
     .map((point) => `${point.x},${point.y}`)
     .join(' ')
   return (

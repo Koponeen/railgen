@@ -2,18 +2,28 @@ import type { PieceLibrary } from '../core/library'
 import type { Track } from '../gen/build'
 import type { AreaShape } from '../gen/mask'
 import { GestureController } from './gestures'
-import { applyView, fitView, pieceBBox, render, zoomToBBox } from './render'
-import { createInitialState, makeLineId, type AppState, type Mode, type Point, type ViewTransform } from './state'
+import { applyView, fitView, render, selectionBBox, zoomToBBox } from './render'
+import {
+  createInitialState,
+  makeLineId,
+  type AppState,
+  type HandleId,
+  type Mode,
+  type Point,
+  type SectionHandles,
+  type ViewTransform,
+} from './state'
 
 // Kartta on imperatiivinen saareke Preactin ulkopuolella
 // (docs/IMPLEMENTATION_PLAN.md luku 2). Tämä moduuli omistaa näkymän,
 // elekäsittelyn ja piirron; Preact-kromi saa vain snapshotin ja callbackit.
+//
+// Osion valinta *ei* asu täällä: kartta korostaa sen mitä sille annetaan ja
+// kertoo mihin sormi osui. Rajaussäännöt ovat `src/edit/section.ts`:ssä, jotta
+// sama logiikka palvelee myös toimintoriviä ja korvausta.
 
 export interface MapEngineSnapshot {
   zoom: number
-  /** Valittu pala radan `pieces`-indeksinä, tai null. */
-  selectedPiece: number | null
-  selectedPieceId: string | null
   /** Katselu- vai piirtotila; piirto palauttaa tilan itse katseluun. */
   mode: Mode
 }
@@ -23,16 +33,25 @@ export interface MapEngineContent {
   track: Track | null
   /** Piirretty viiva haaleana radan alla, tai null. */
   guide?: readonly Point[] | null
+  /** Korostettava osio radan `pieces`-indekseinä. */
+  selection?: readonly number[] | null
+  /** Osion liukuvat päätykahvat. */
+  handles?: SectionHandles | null
 }
 
 export interface MapEngineCallbacks {
   onChange: (snapshot: MapEngineSnapshot) => void
   /** Sormi nousi piirtotilassa: raakapisteet sovitettavaksi. */
   onDraw?: (points: Point[]) => void
+  /** Napautus palaan, tai null kun napautus osui tyhjään. */
+  onTapPiece?: (index: number | null) => void
+  /** Päätykahvaa vedetään: mihin kohtaan maailmaa sormi osoittaa. */
+  onHandleMove?: (handle: HandleId, point: Point) => void
+  onHandleEnd?: () => void
 }
 
 export interface MapEngineHandle {
-  /** Vaihtaa näytettävän radan ja alueen ilman uudelleenmounttausta. */
+  /** Vaihtaa näytettävän sisällön ilman uudelleenmounttausta. */
   update: (next: MapEngineContent) => void
   setMode: (mode: Mode) => void
   fit: () => void
@@ -52,13 +71,7 @@ export function mountMapEngine(
   let draft: Point[] | null = null
 
   function snapshot(): MapEngineSnapshot {
-    const placed = state.selectedPiece === null ? null : state.track?.pieces[state.selectedPiece]
-    return {
-      zoom: state.view.scale,
-      selectedPiece: state.selectedPiece,
-      selectedPieceId: placed?.pieceId ?? null,
-      mode: state.mode,
-    }
+    return { zoom: state.view.scale, mode: state.mode }
   }
 
   function emit(): void {
@@ -79,28 +92,11 @@ export function mountMapEngine(
     }, 260)
   }
 
-  function selectPiece(index: number): void {
-    state.selectedPiece = index
-    const bbox = pieceBBox(state, index, library)
-    if (bbox) animateTo(zoomToBBox(bbox, state.area))
-    emit()
-  }
-
-  function deselectAndFit(): void {
-    state.selectedPiece = null
-    animateTo(fitView())
-    emit()
-  }
-
   function handleTap(client: { clientX: number; clientY: number }): void {
     const element = document.elementFromPoint(client.clientX, client.clientY)
     const pieceElement = element instanceof Element ? element.closest('[data-piece-index]') : null
     const index = pieceElement?.getAttribute('data-piece-index')
-    if (index !== null && index !== undefined) {
-      selectPiece(Number(index))
-    } else if (state.selectedPiece !== null) {
-      deselectAndFit()
-    }
+    callbacks.onTapPiece?.(index === null || index === undefined ? null : Number(index))
   }
 
   const gestures = new GestureController(container, svg, world, {
@@ -139,6 +135,20 @@ export function mountMapEngine(
     },
 
     onTap: handleTap,
+
+    handleAt(client) {
+      if (!state.handles) return null
+      const element = document.elementFromPoint(client.clientX, client.clientY)
+      const handle = element instanceof Element ? element.closest('[data-handle]') : null
+      const id = handle?.getAttribute('data-handle')
+      return id === 'start' || id === 'end' ? id : null
+    },
+    onHandleMove(handle, point) {
+      callbacks.onHandleMove?.(handle, point)
+    },
+    onHandleEnd() {
+      callbacks.onHandleEnd?.()
+    },
   })
 
   setGuide(initial.guide)
@@ -146,12 +156,29 @@ export function mountMapEngine(
 
   return {
     update(next) {
+      // Näkymä nollataan vain kun kartalla on eri rata tai eri lattia. Osion
+      // venytys päivittää sisällön kymmeniä kertoja sekunnissa, eikä kartta saa
+      // hypätä sormen alta.
+      const moved = state.area !== next.area || state.track !== next.track
+      const hadSelection = (state.selection?.length ?? 0) > 0
+      const hasSelection = (next.selection?.length ?? 0) > 0
+
       state.area = next.area
       state.track = next.track
-      state.selectedPiece = null
-      state.view = fitView()
+      state.selection = next.selection ?? null
+      state.handles = next.handles ?? null
       setGuide(next.guide)
+      if (moved) state.view = fitView()
       emit()
+
+      // Valinta → automaattinen zoomaus osuuteen + paluu kokonäkymään
+      // (README luku 7). Kesken venytyksen ei zoomata uudelleen.
+      if (!moved && hasSelection && !hadSelection) {
+        const bbox = selectionBBox(state, library)
+        if (bbox) animateTo(zoomToBBox(bbox, state.area))
+      } else if (!moved && !hasSelection && hadSelection) {
+        animateTo(fitView())
+      }
     },
     setMode(mode) {
       if (state.mode === mode) return
@@ -160,7 +187,10 @@ export function mountMapEngine(
       if (mode === 'view') draft = null
       emit()
     },
-    fit: deselectAndFit,
+    fit() {
+      animateTo(fitView())
+      emit()
+    },
     destroy: () => gestures.destroy(),
   }
 }

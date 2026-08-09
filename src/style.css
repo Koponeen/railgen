@@ -118,6 +118,10 @@ body {
   color: var(--warning);
 }
 
+.muted {
+  color: var(--text-muted);
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }

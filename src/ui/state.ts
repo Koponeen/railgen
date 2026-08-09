@@ -22,6 +22,14 @@ export interface ViewTransform {
 
 export type Mode = 'view' | 'draw'
 
+/** Osion liukuvat päätykahvat (README luku 6). */
+export interface SectionHandles {
+  start: Point
+  end: Point
+}
+
+export type HandleId = keyof SectionHandles
+
 export interface AppState {
   view: ViewTransform
   mode: Mode
@@ -29,8 +37,14 @@ export interface AppState {
   area: AreaShape
   /** Näytettävä rata, tai null jos sitä ei ole vielä generoitu. */
   track: Track | null
-  /** Valittu pala `track.pieces`-indeksinä. */
-  selectedPiece: number | null
+  /**
+   * Valittu osio `track.pieces`-indekseinä. Kartta vain korostaa nämä; osion
+   * rajaus on Preactin puolella (`src/edit/section.ts`), koska päätykahvat ja
+   * toimintorivi elävät samassa tilassa.
+   */
+  selection: readonly number[] | null
+  /** Päätykahvojen sijainnit kartalla, tai null jos osiota ei ole valittu. */
+  handles: SectionHandles | null
   /**
    * Vapaalla kädellä piirretyt viivat. Sovituksen jälkeen viiva jää kartalle
    * haaleana: käyttäjä näkee mitä hän piirsi ja mitä siitä tuli.
@@ -46,7 +60,8 @@ export function createInitialState(area: AreaShape = DEFAULT_AREA): AppState {
     mode: 'view',
     area,
     track: null,
-    selectedPiece: null,
+    selection: null,
+    handles: null,
     lines: [],
   }
 }

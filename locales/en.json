@@ -106,6 +106,24 @@
       "self-collision": "The track would run into itself. Crossing tracks come later."
     }
   },
+  "section": {
+    "brief": "{length} cm · {pieces} pieces · clearance {left} cm left, {right} cm right",
+    "freed": "Taking it apart frees {pieces}.",
+    "draw": "Draw instead",
+    "drawHint": "Draw a new shape for the section. Both ends stay where they are.",
+    "clear": "Clear selection",
+    "notReplaceable": "This section cannot be replaced by drawing.",
+    "replaced": "Section replaced: {pieces} pieces · track {length} m · off by {deviation} mm",
+    "failure": {
+      "unknown": "The section could not be replaced.",
+      "section-not-replaceable": "This section cannot be replaced: a branch leaves from its middle, or it covers the whole track.",
+      "drawing-too-short": "The stroke is too short. Draw from one end of the section to the other.",
+      "no-fit": "No combination of pieces follows that stroke and still ends at the section's end port. Try a gentler shape.",
+      "ends-beyond-budget": "The shape does not reach the end ports. Try a gentler shape, or stretch the selection with the handles.",
+      "joint-over-safety-cap": "One joint would be too sharp. Draw a gentler shape.",
+      "self-collision": "The new run would hit the rest of the track. Draw it on the other side."
+    }
+  },
   "result": {
     "title": "Track",
     "empty": "Generate a track first.",

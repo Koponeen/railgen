@@ -595,6 +595,29 @@ export function placeTerminal(piece: ResolvedPiece, frame: Frame, options: Place
   return { pieceId: piece.id, placement, entryPortId: entry.id, exitPortId: entry.id }
 }
 
+/**
+ * Kehys, johon pala on sijoitettu: sen sisääntuloportti maailmakoordinaatistossa,
+ * käännettynä takaisin kohdistimeksi. `placeAtFrame(piece, entryFrame(placed))`
+ * palauttaa saman sijoituksen, joten valmiin radan ketjun voi kulkea kumpaan
+ * suuntaan tahansa ilman että sijoitushistoriaa tarvitsee säilyttää.
+ */
+export function entryFrame(placed: PlacedPiece, piece: ResolvedPiece): Frame {
+  const port = worldPort(placed, piece, placed.entryPortId)
+  return { x: port.x, y: port.y, dir: oppositeDir(port.dir), level: port.levelOffset, open: complementOf(port.connector) }
+}
+
+/** Kehys palan jälkeen: sama jonka `placeAtFrame` palauttaa ulostulona. */
+export function exitFrame(placed: PlacedPiece, piece: ResolvedPiece): Frame {
+  const port = worldPort(placed, piece, placed.exitPortId)
+  return { x: port.x, y: port.y, dir: port.dir, level: port.levelOffset, open: port.connector }
+}
+
+function worldPort(placed: PlacedPiece, piece: ResolvedPiece, portId: string): Port {
+  const port = piece.ports.find((candidate) => candidate.id === portId)
+  if (!port) throw new ReferenceError(`piece "${piece.id}" has no port "${portId}"`)
+  return transformPort(port, placed.placement)
+}
+
 export function placedSegments(placed: PlacedPiece, piece: ResolvedPiece): Segment[] {
   return piece.segments.map((segment) => transformSegment(segment, placed.placement))
 }

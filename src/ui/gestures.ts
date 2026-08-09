@@ -1,4 +1,4 @@
-import type { Mode, Point, ViewTransform } from './state'
+import type { HandleId, Mode, Point, ViewTransform } from './state'
 
 // README luku 7 "Eleet": universaali sääntö on että kaksi sormea navigoi AINA
 // (nipistys = zoom, veto = pan) tilasta riippumatta. Yksi sormi joko panoroi/valitsee
@@ -22,6 +22,11 @@ export interface GestureCallbacks {
   onDrawCancel: () => void
   onDrawEnd: (points: Point[]) => void
   onTap: (client: { clientX: number; clientY: number }) => void
+  /** Osuiko sormi osion päätykahvaan? Null = tavallinen panorointi/napautus. */
+  handleAt: (client: { clientX: number; clientY: number }) => HandleId | null
+  /** Kahvaa vedetään: kohta maailmakoordinaatistossa. */
+  onHandleMove: (handle: HandleId, point: Point) => void
+  onHandleEnd: () => void
 }
 
 interface PointerInfo {
@@ -46,6 +51,11 @@ type Phase =
       pointerId: number
       points: Point[]
       startTime: number
+    }
+  | {
+      kind: 'handle'
+      pointerId: number
+      handle: HandleId
     }
   | {
       kind: 'nav'
@@ -149,6 +159,13 @@ export class GestureController {
       this.cb.onDrawStart(points[0])
       return
     }
+    // Päätykahva vie sormen ennen panorointia: kahvan päältä alkava veto on
+    // aina osion venytystä, ei kartan siirtoa.
+    const handle = this.cb.handleAt({ clientX: e.clientX, clientY: e.clientY })
+    if (handle) {
+      this.phase = { kind: 'handle', pointerId: e.pointerId, handle }
+      return
+    }
     const ctm = this.hostCtm()
     if (!ctm) return
     const inv = ctm.inverse()
@@ -166,8 +183,11 @@ export class GestureController {
   }
 
   private startNavGesture(): void {
+    // Kaksi sormea navigoi aina: kesken oleva veto tai kahvan siirto perutaan.
     if (this.phase.kind === 'draw') {
       this.cb.onDrawCancel()
+    } else if (this.phase.kind === 'handle') {
+      this.cb.onHandleEnd()
     }
     const ids = [...this.pointers.keys()].slice(0, 2) as [number, number]
     const p1 = this.pointers.get(ids[0])
@@ -201,6 +221,11 @@ export class GestureController {
         this.phase.points.push(this.clientToWorld({ x: ce.clientX, y: ce.clientY }))
       }
       this.cb.onDrawUpdate(this.phase.points.slice())
+      return
+    }
+
+    if (this.phase.kind === 'handle' && e.pointerId === this.phase.pointerId) {
+      this.cb.onHandleMove(this.phase.handle, this.clientToWorld({ x: e.clientX, y: e.clientY }))
       return
     }
 
@@ -245,6 +270,9 @@ export class GestureController {
       } else {
         this.cb.onDrawCancel()
       }
+    } else if (this.phase.kind === 'handle' && e.pointerId === this.phase.pointerId) {
+      this.phase = { kind: 'idle' }
+      this.cb.onHandleEnd()
     } else if (this.phase.kind === 'pan' && e.pointerId === this.phase.pointerId) {
       const duration = performance.now() - this.phase.startTime
       const isTap = !this.phase.moved && duration < TAP_MAX_DURATION_MS

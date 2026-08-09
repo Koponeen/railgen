@@ -4,6 +4,7 @@ import type { Vec } from '../core/vec'
 import { placedSegments, type PlacedPiece } from '../core/pieces'
 import { GROOVE_SPACING_MM } from '../core/units'
 import type { Track } from '../gen/build'
+import { areaOutline, type AreaShape } from '../gen/mask'
 
 // Rata piirretään geometriadatasta, ei kuva-asseteista (CLAUDE.md). Lauta on
 // keskilinja levitettynä 40 mm:iin ja urat sen rinnakkaissiirtoja, joten
@@ -78,41 +79,9 @@ function buildBuffer(segments: ReturnType<typeof placedSegments>): SVGLineElemen
   return bar
 }
 
-/** Alueen ääriviiva: suorakaide tai L (suorakaide miinus nurkka). */
-export function areaOutlinePoints(area: {
-  kind: 'rect' | 'L'
-  widthMm: number
-  depthMm: number
-  cutWidthMm?: number
-  cutDepthMm?: number
-  corner?: 'nw' | 'ne' | 'sw' | 'se'
-}): Vec[] {
-  const { widthMm: w, depthMm: d } = area
-  if (area.kind === 'rect') {
-    return [
-      { x: 0, y: 0 },
-      { x: w, y: 0 },
-      { x: w, y: d },
-      { x: 0, y: d },
-    ]
-  }
-  const cw = area.cutWidthMm ?? 0
-  const cd = area.cutDepthMm ?? 0
-  const west = area.corner === 'nw' || area.corner === 'sw'
-  const north = area.corner === 'nw' || area.corner === 'ne'
-  const x0 = west ? cw : w - cw
-  const y0 = north ? cd : d - cd
-
-  // Kuljetaan kehä myötäpäivään ja kierretään leikattu nurkka.
-  if (north && !west) return [{ x: 0, y: 0 }, { x: x0, y: 0 }, { x: x0, y: y0 }, { x: w, y: y0 }, { x: w, y: d }, { x: 0, y: d }]
-  if (north && west) return [{ x: x0, y: 0 }, { x: w, y: 0 }, { x: w, y: d }, { x: 0, y: d }, { x: 0, y: y0 }, { x: x0, y: y0 }]
-  if (!north && !west) return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: y0 }, { x: x0, y: y0 }, { x: x0, y: d }, { x: 0, y: d }]
-  return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: d }, { x: x0, y: d }, { x: x0, y: y0 }, { x: 0, y: y0 }]
-}
-
-export function buildAreaShape(area: Parameters<typeof areaOutlinePoints>[0]): SVGPolygonElement {
+export function buildAreaShape(area: AreaShape): SVGPolygonElement {
   const polygon = document.createElementNS(SVG_NS, 'polygon')
-  polygon.setAttribute('points', pointsAttribute(areaOutlinePoints(area)))
+  polygon.setAttribute('points', pointsAttribute(areaOutline(area)))
   polygon.setAttribute('class', 'floor-border')
   return polygon
 }

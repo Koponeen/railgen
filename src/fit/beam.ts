@@ -78,6 +78,8 @@ const FLEX_USE_COST = 2000
 const UNCOMMON_USE_COST = 150
 /** Poikkeama mitataan tällä tiheydellä palan keskilinjaa pitkin. */
 const SAMPLE_STEP_MM = 20
+/** Millimetri kiinnitetystä päätyportista maksaa tämän verran valmiiden ketjujen vertailussa. */
+const GOAL_GAP_COST_PER_MM = 20
 
 function useCostFor(piece: ResolvedPiece): number {
   if (piece.tags.includes('flex')) return FLEX_USE_COST
@@ -130,11 +132,27 @@ export interface BeamFit {
   cost: number
 }
 
+/**
+ * Kiinnitetty päätekehys (osion korvaus, README luku 6). Ketju kelpaa vain jos
+ * se päättyy tähän porttiin: suunta, taso ja liitin täsmälleen, sijainti
+ * toleranssin sisällä — jäljelle jäävän heiton nielee Vario-budjetti.
+ */
+export interface GoalFrame {
+  frame: Frame
+  toleranceMm: number
+}
+
 export interface BeamOptions {
   library: PieceLibrary
   inventory: Inventory
   tuning?: Partial<FitTuning>
   allowConnectorFlip?: boolean
+  /**
+   * Kiinnitetyt aloituskehykset. Ilman näitä alkusuunta arvataan viivasta;
+   * osion korvauksessa se on tiedossa eikä sitä saa arvata.
+   */
+  start?: readonly Frame[]
+  goal?: GoalFrame
 }
 
 /** Kääntymä lokeroina välillä -3..4; etumerkki kertoo puolen. */
@@ -157,9 +175,14 @@ export function beamFit(target: TargetPath, options: BeamOptions): BeamFit[] {
   const candidates = fitOptions(options.library).filter((option) => stockOf(options.inventory, option.piece.id) > 0)
   if (candidates.length === 0) return []
 
-  const beam = startNodes(target)
+  const { goal } = options
+  const beam = startNodes(target, options.start)
   const finished: Node[] = []
   const rank = (node: Node): number => node.cost + Math.max(0, target.lengthMm - node.alongMm) * tuning.remainingCostPerMm
+  // Valmiiden ketjujen keskinäinen järjestys: kiinnitetyllä päätyportilla
+  // ratkaisee se, kuinka lähelle porttia päästiin, koska loppuheitto menee
+  // suoraan Vario-budjetista.
+  const finishRank = goal ? (node: Node): number => node.cost + goalGapMm(node.frame, goal) * GOAL_GAP_COST_PER_MM : rank
 
   let live = beam
   for (let step = 0; step < tuning.maxPieces && live.length > 0; step += 1) {
@@ -168,7 +191,8 @@ export function beamFit(target: TargetPath, options: BeamOptions): BeamFit[] {
       for (const option of candidates) {
         const child = expand(node, option, target, tuning, options)
         if (!child) continue
-        if (child.alongMm >= target.lengthMm - tuning.endToleranceMm) finished.push(child)
+        const done = goal ? reachesGoal(child.frame, goal) : child.alongMm >= target.lengthMm - tuning.endToleranceMm
+        if (done) finished.push(child)
         else children.push(child)
       }
     }
@@ -179,29 +203,41 @@ export function beamFit(target: TargetPath, options: BeamOptions): BeamFit[] {
   }
 
   // Loppuun jäävä matka maksaa, muuten ketju kannattaisi aina lopettaa heti
-  // toleranssin sisällä ja viimeinen pala jäisi lyhyeksi.
-  const complete = finished.length > 0 ? finished : live.filter((node) => node.alongMm >= target.lengthMm * PARTIAL_ACCEPT_RATIO)
-  complete.sort((a, b) => rank(a) - rank(b))
+  // toleranssin sisällä ja viimeinen pala jäisi lyhyeksi. Kiinnitetyllä
+  // päätyportilla vajaa ketju ei kelpaa lainkaan: sen pää jäisi ilmaan.
+  const complete = goal
+    ? finished
+    : finished.length > 0
+      ? finished
+      : live.filter((node) => node.alongMm >= target.lengthMm * PARTIAL_ACCEPT_RATIO)
+  complete.sort((a, b) => finishRank(a) - finishRank(b))
   return complete.slice(0, tuning.resultLimit).map(toFit)
+}
+
+/** Osuuko ketjun pää kiinnitettyyn päätyporttiin? */
+function reachesGoal(frame: Frame, goal: GoalFrame): boolean {
+  if (frame.dir !== goal.frame.dir || frame.level !== goal.frame.level || frame.open !== goal.frame.open) return false
+  return goalGapMm(frame, goal) <= goal.toleranceMm
+}
+
+function goalGapMm(frame: Frame, goal: GoalFrame): number {
+  return Math.hypot(frame.x - goal.frame.x, frame.y - goal.frame.y)
 }
 
 /**
  * Aloituskehykset. Piirron alkusuunta ei osu 45°-lokeroon, joten lähimmän
  * lisäksi kokeillaan molempia naapureita — pelkkä pyöristys voi olla 22,5°
- * pielessä, mikä näkyy heti ensimmäisessä mutkassa.
+ * pielessä, mikä näkyy heti ensimmäisessä mutkassa. Osion korvauksessa
+ * aloituskehys on kiinnitetty portti, jolloin arvaamiselle ei ole sijaa.
  */
-function startNodes(target: TargetPath): Node[] {
-  const headingDeg = target.headingDegAt(0, 80)
-  const nearest = snapDegreesToDir(headingDeg).dir
-  const dirs: Dir[] = [nearest, normalizeDir(nearest + 1), normalizeDir(nearest - 1)]
-  const origin = target.pointAt(0)
-
-  return dirs.map((dir) => ({
+function startNodes(target: TargetPath, fixed?: readonly Frame[]): Node[] {
+  // Jokainen juuri saa oman käyttölaskurinsa: keila haarautuu näistä eivätkä
+  // haarat saa jakaa samaa Mapia.
+  const root = (frame: Frame, cost: number): Node => ({
     parent: null,
     placed: null,
-    frame: startFrame(origin.x, origin.y, dir, 0, 'pin'),
-    // Väärä aloitussuunta maksaa hieman, jotta lähin lokero voittaa tasapelissä.
-    cost: dir === nearest ? 0 : 60,
+    frame,
+    cost,
     alongMm: 0,
     count: 0,
     turn: 0,
@@ -209,7 +245,17 @@ function startNodes(target: TargetPath): Node[] {
     deviationSumMm: 0,
     deviationLengthMm: 0,
     maxDeviationMm: 0,
-  }))
+  })
+
+  if (fixed && fixed.length > 0) return fixed.map((frame) => root(frame, 0))
+
+  const headingDeg = target.headingDegAt(0, 80)
+  const nearest = snapDegreesToDir(headingDeg).dir
+  const dirs: Dir[] = [nearest, normalizeDir(nearest + 1), normalizeDir(nearest - 1)]
+  const origin = target.pointAt(0)
+
+  // Väärä aloitussuunta maksaa hieman, jotta lähin lokero voittaa tasapelissä.
+  return dirs.map((dir) => root(startFrame(origin.x, origin.y, dir, 0, 'pin'), dir === nearest ? 0 : 60))
 }
 
 function expand(node: Node, option: FitOption, target: TargetPath, tuning: FitTuning, options: BeamOptions): Node | null {

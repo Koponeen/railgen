@@ -1,5 +1,5 @@
 import type { PieceLibrary } from '../core/library'
-import type { BBox } from '../core/path'
+import { unionBBox, type BBox } from '../core/path'
 import { placedBBox } from '../core/pieces'
 import { CELL_MM } from '../core/units'
 import type { AreaShape } from '../gen/mask'
@@ -10,6 +10,21 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 const SELECTION_MARGIN_MM = 60
 const MIN_SCALE = 0.4
 const MAX_SCALE = 8
+
+/**
+ * Kahvan koko pysyy samana ruudulla, ei maailmassa: sormi on aina yhtä paksu,
+ * vaikka kartta olisi zoomattu palan mittaan. Osuus alueen mitasta on säädetty
+ * niin, että kokonäkymässä nuppi on ~44 px eli sormimitoituksen minimi
+ * (UI-linjaus 3), ja zoom pienentää maailmasädettä samassa suhteessa.
+ */
+const HANDLE_SPAN_RATIO = 0.05
+const HANDLE_MIN_RADIUS_MM = 12
+const HANDLE_MAX_RADIUS_MM = 250
+/** Osuma-alue on nuppia reilusti isompi: kahvaan pitää osua ilman tähtäilyä. */
+const HANDLE_HIT_RATIO = 2.2
+
+/** Näin kapeaa osiota ei zoomata koko ruudun kokoiseksi: konteksti katoaisi. */
+const MIN_SELECTION_SPAN_MM = CELL_MM * 3
 
 export type { BBox }
 
@@ -37,8 +52,8 @@ export function render(world: SVGGElement, state: AppState, draft: Point[] | nul
 
   if (state.track) {
     const track = buildTrackGroup(state.track, library)
-    if (state.selectedPiece !== null) {
-      track.querySelector(`[data-piece-index="${state.selectedPiece}"]`)?.classList.add('selected')
+    for (const index of state.selection ?? []) {
+      track.querySelector(`[data-piece-index="${index}"]`)?.classList.add('selected')
     }
     world.appendChild(track)
   }
@@ -46,6 +61,40 @@ export function render(world: SVGGElement, state: AppState, draft: Point[] | nul
   if (draft && draft.length >= 2) {
     world.appendChild(buildLinePath(draft, 'line draft'))
   }
+
+  // Kahvat piirretään päällimmäisiksi: ne ovat sormen kohde, eivät koriste.
+  if (state.handles) {
+    const radiusMm = handleRadiusMm(state)
+    world.appendChild(buildHandle(state.handles.start, 'start', radiusMm))
+    world.appendChild(buildHandle(state.handles.end, 'end', radiusMm))
+  }
+}
+
+function handleRadiusMm(state: AppState): number {
+  const span = Math.max(state.area.widthMm, state.area.depthMm)
+  return clamp((span * HANDLE_SPAN_RATIO) / state.view.scale, HANDLE_MIN_RADIUS_MM, HANDLE_MAX_RADIUS_MM)
+}
+
+/** Osion päätykahva: näkyvä nuppi ja sen ympärillä reilu näkymätön osuma-alue. */
+function buildHandle(point: Point, id: string, radiusMm: number): SVGGElement {
+  const group = document.createElementNS(SVG_NS, 'g')
+  group.setAttribute('class', 'handle')
+  group.setAttribute('data-handle', id)
+
+  for (const [className, radius] of [
+    ['handle-hit', radiusMm * HANDLE_HIT_RATIO],
+    ['handle-knob', radiusMm],
+  ] as const) {
+    const circle = document.createElementNS(SVG_NS, 'circle')
+    circle.setAttribute('cx', point.x.toFixed(1))
+    circle.setAttribute('cy', point.y.toFixed(1))
+    circle.setAttribute('r', radius.toFixed(1))
+    circle.setAttribute('class', className)
+    group.appendChild(circle)
+  }
+  // Renkaan viivakin skaalautuu, jotta nuppi näyttää samalta joka zoomilla.
+  group.setAttribute('style', `--handle-stroke: ${(radiusMm * 0.3).toFixed(1)}`)
+  return group
 }
 
 function buildFloor(area: AreaShape): SVGGElement {
@@ -80,10 +129,14 @@ function buildLinePath(points: readonly Point[], className: string): SVGPathElem
   return path
 }
 
-export function pieceBBox(state: AppState, index: number, library: PieceLibrary): BBox | null {
-  const placed = state.track?.pieces[index]
-  if (!placed) return null
-  return placedBBox(placed, library.get(placed.pieceId))
+/** Valitun osion äärimitat, joihin kartta zoomaa (README luku 7). */
+export function selectionBBox(state: AppState, library: PieceLibrary): BBox | null {
+  const boxes: BBox[] = []
+  for (const index of state.selection ?? []) {
+    const placed = state.track?.pieces[index]
+    if (placed) boxes.push(placedBBox(placed, library.get(placed.pieceId)))
+  }
+  return boxes.length > 0 ? unionBBox(boxes) : null
 }
 
 /**
@@ -95,8 +148,10 @@ export function fitView(): ViewTransform {
 }
 
 export function zoomToBBox(bbox: BBox, area: AreaShape): ViewTransform {
-  const w = Math.max(bbox.maxX - bbox.minX, 1) + SELECTION_MARGIN_MM * 2
-  const h = Math.max(bbox.maxY - bbox.minY, 1) + SELECTION_MARGIN_MM * 2
+  // Lyhyt osuus ei täytä ruutua yksinään: käyttäjän pitää nähdä mihin se
+  // liittyy, muuten valinta menettää merkityksensä (README luku 7).
+  const w = Math.max(bbox.maxX - bbox.minX + SELECTION_MARGIN_MM * 2, MIN_SELECTION_SPAN_MM)
+  const h = Math.max(bbox.maxY - bbox.minY + SELECTION_MARGIN_MM * 2, MIN_SELECTION_SPAN_MM)
   const scale = clamp(Math.min(area.widthMm / w, area.depthMm / h), MIN_SCALE, MAX_SCALE)
   const cx = (bbox.minX + bbox.maxX) / 2
   const cy = (bbox.minY + bbox.maxY) / 2
