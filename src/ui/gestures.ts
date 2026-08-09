@@ -110,6 +110,19 @@ export class GestureController {
     return this.screenToViewBox(ctm.inverse(), client)
   }
 
+  /**
+   * Näkymän transformin isäntäkehys: se ryhmä, jonka sisällä `world`-elementin
+   * oma transform vaikuttaa. Pan- ja zoom-siirtymät on mitattava juuri tässä
+   * kehyksessä — juuri-SVG:n koordinaatistossa mitattuna ne olisivat vinossa
+   * heti kun kartan ja ruudun välissä on mikä tahansa muunnos (esim. ruudulle
+   * sovitettu neljänneskierros).
+   */
+  private hostCtm(): DOMMatrix | null {
+    const parent = this.world.parentNode
+    const host = parent instanceof SVGGraphicsElement ? parent : this.svg
+    return host.getScreenCTM()
+  }
+
   private preview(view: ViewTransform): void {
     this.lastView = view
     this.cb.onViewPreview(view)
@@ -136,7 +149,7 @@ export class GestureController {
       this.cb.onDrawStart(points[0])
       return
     }
-    const ctm = this.svg.getScreenCTM()
+    const ctm = this.hostCtm()
     if (!ctm) return
     const inv = ctm.inverse()
     this.phase = {
@@ -159,7 +172,7 @@ export class GestureController {
     const ids = [...this.pointers.keys()].slice(0, 2) as [number, number]
     const p1 = this.pointers.get(ids[0])
     const p2 = this.pointers.get(ids[1])
-    const ctm = this.svg.getScreenCTM()
+    const ctm = this.hostCtm()
     if (!p1 || !p2 || !ctm) {
       this.phase = { kind: 'idle' }
       return
@@ -262,7 +275,7 @@ export class GestureController {
   /** Kun pinch/pan-eleestä jää yksi sormi jäljelle, jatketaan panorointina ilman hyppäystä. */
   private rebaseNavToPan(pointerId: number): void {
     const remaining = this.pointers.get(pointerId)
-    const ctm = this.svg.getScreenCTM()
+    const ctm = this.hostCtm()
     if (!remaining || !ctm) {
       this.phase = { kind: 'idle' }
       return
@@ -285,7 +298,7 @@ export class GestureController {
 
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault()
-    const ctm = this.svg.getScreenCTM()
+    const ctm = this.hostCtm()
     if (!ctm) return
     const inv = ctm.inverse()
     const pointVB = this.screenToViewBox(inv, { x: e.clientX, y: e.clientY })

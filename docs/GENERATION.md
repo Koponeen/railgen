@@ -57,6 +57,17 @@ Jäännös on tyypillisesti muutamia millejä. Se voi olla suurempi, kun osuus o
 täytettävät pituudet ovat harvassa lähellä nollaa (54 mm:n askel, ei 18 mm:n). Jäännös
 menee Vario-budjetin nieltäväksi, ja `evaluateClosure` päättää kelpaako se.
 
+### Jäännös jaetaan myös geometriassa
+
+Nimellisgeometriassa koko jäännös kasautuu yhteen saumaan, jolloin rata näyttäisi katkeavan
+siitä. Lattialla näin ei käy: jokainen liitos venyy ja taipuu vähän, ja juuri sitä
+Vario-budjetti mittaa. Siksi materialisointi siirtää jäännöksen tasan koko ketjulle
+(`relaxClosure`), jolloin silmukka sulkeutuu täsmälleen ja yksittäinen liitos siirtyy alle
+millin — kaukana turvakatosta.
+
+**Kireysprosentti lasketaan ennen tätä**, nimellisgeometriasta, joten luku pysyy rehellisenä:
+se kertoo kuinka paljon joustoa rata todella vaatii, vaikka kuva näyttää ehjältä.
+
 `skeleton.test.ts` tarkistaa, että rungon ilmoittama jäännös vastaa sekä analyyttisesti
 laskettua sulkeumaa että materialisoidun radan todellista aukkoa.
 

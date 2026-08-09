@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { createInventory, unlimitedInventory } from '../core/inventory'
 import { defaultLibrary } from '../core/library'
 import { seedFromInput } from '../core/rng'
-import { MICRO_GRID_MM } from '../core/units'
-import { DEFAULT_FLEX } from '../core/vario'
+import { placedPorts, type PlacedPiece } from '../core/pieces'
+import { EPS_MM, MICRO_GRID_MM } from '../core/units'
+import { DEFAULT_FLEX, DEFAULT_VARIO } from '../core/vario'
 import { countCollisions } from './build'
 import { generate, type GenerateOptions } from './generate'
 import type { AreaShape } from './mask'
@@ -29,6 +30,19 @@ function fingerprint(pieces: { pieceId: string; placement: { x: number; y: numbe
     hash = Math.imul(hash, 0x01000193) >>> 0
   }
   return `${pieces.length}:${(hash >>> 0).toString(36)}`
+}
+
+/** Pienin etäisyys kahden kiinni olevan palan porttien välillä. */
+function jointGapMm(a: PlacedPiece, b: PlacedPiece): number {
+  const portsA = placedPorts(a, library.get(a.pieceId))
+  const portsB = placedPorts(b, library.get(b.pieceId))
+  let best = Infinity
+  for (const portA of portsA) {
+    for (const portB of portsB) {
+      best = Math.min(best, Math.hypot(portA.x - portB.x, portA.y - portB.y))
+    }
+  }
+  return best
 }
 
 describe('generation pipeline', () => {
@@ -75,6 +89,25 @@ describe('generation pipeline', () => {
       expect(countCollisions(track.pieces, library, track.joints), seed).toBe(0)
       expect(track.bbox.minX, seed).toBeGreaterThanOrEqual(0)
       expect(track.bbox.maxX, seed).toBeLessThanOrEqual(LIVING_ROOM.widthMm)
+    }
+  })
+
+  it('closes the loop it draws, with no joint left carrying the whole error', () => {
+    // Nimellisgeometriassa jäännös kasautuu yhteen saumaan; lattialla se
+    // jakautuu liitoksille. Piirretyn radan pitää näyttää yhtenäiseltä.
+    for (const seed of ['a', 'b', 'c', 'd', 'olohuone']) {
+      const result = run({ seed })
+      if (!result.winner) continue
+      const { pieces, joints, closure } = result.winner.track
+
+      let worstJointMm = 0
+      for (const [a, b] of joints) {
+        worstJointMm = Math.max(worstJointMm, jointGapMm(pieces[a], pieces[b]))
+      }
+
+      expect(worstJointMm, `${seed}: worst joint`).toBeLessThan(DEFAULT_VARIO.maxStretchPerJointMm)
+      // Yksikään liitos ei kanna koko virhettä, vaikka se olisi kymmeniä millejä.
+      expect(worstJointMm, `${seed}: vs total`).toBeLessThanOrEqual(closure.error.gapMm + EPS_MM)
     }
   })
 
@@ -128,9 +161,9 @@ describe('determinism', () => {
     // Nämä arvot lukitsevat koko putken: reitti, elementtivalinnat, mutaatiot,
     // täyttö ja pisteytys. Jos jokin näistä muuttuu, testi kaatuu tarkoituksella.
     const golden: Record<string, string> = {
-      olohuone: '45:rpcxsm',
-      matto: '45:1w9qf2z',
-      'kaisan rata': '50:18biq1s',
+      olohuone: '45:1ourt06',
+      matto: '45:1a8eham',
+      'kaisan rata': '50:13w6giu',
     }
     for (const [seed, expected] of Object.entries(golden)) {
       const result = run({ seed })

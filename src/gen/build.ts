@@ -114,14 +114,19 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
   // joten se on kirjattava naapuruudeksi eikä pääteltävä porttien osumisesta.
   if (previous >= 0 && pieces.length > 1) joints.push([previous, 0])
 
+  const gap: Vec = { x: cursor.x - start.x, y: cursor.y - start.y }
   const closure = evaluateClosure(
     jointsForChain(pieces.map((placed) => library.get(placed.pieceId)), true),
     {
-      gapMm: Math.hypot(cursor.x - start.x, cursor.y - start.y),
+      gapMm: Math.hypot(gap.x, gap.y),
       angleDeg: angleDifferenceDeg(dirToDegrees(cursor.dir), dirToDegrees(start.dir)),
     },
     { settings: context.vario, flex: context.flex, seamIndex: 0, spread: 0 },
   )
+
+  // Kireys on mitattu nimellisgeometriasta, joten luku pysyy rehellisenä myös
+  // sen jälkeen kun jäännös jaetaan liitoksille.
+  relaxClosure(pieces, gap, previous)
 
   const footprints = pieces.map((placed) => placedFootprint(placed, library.get(placed.pieceId)))
   const bbox = unionBBox(footprints.flat().map(polygonBBox))
@@ -139,6 +144,30 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
     maxLevel: pieces.reduce((max, placed) => Math.max(max, placed.placement.level + library.get(placed.pieceId).levelDelta), 0),
     fitsArea,
     collisions: countCollisions(pieces, library, joints),
+  }
+}
+
+/**
+ * Jakaa sulkeutumisjäännöksen koko ketjulle.
+ *
+ * Nimellisgeometriassa jäännös kasautuu yhteen saumaan, jolloin rata näyttäisi
+ * katkeavan siitä. Lattialla näin ei käy: jokainen liitos venyy ja taipuu vähän,
+ * ja Vario-budjetti mittaa juuri sitä. Siksi jäännös siirretään tasan liitoksille
+ * — silmukka sulkeutuu täsmälleen ja yksittäinen liitos siirtyy alle millin,
+ * kaukana turvakatosta. Tämä on sama malli jota `evaluateClosure` jo laskee,
+ * nyt vain myös geometriassa.
+ */
+function relaxClosure(pieces: PlacedPiece[], gap: Vec, chainEnd: number): void {
+  if (chainEnd < 1) return
+  for (let i = 0; i < pieces.length; i += 1) {
+    // Sivuhaaran palat ovat taulukossa kiinnityskohtansa jäljessä, joten ne
+    // liikkuvat sen mukana; ketjun pään jälkeen osuus on täysi.
+    const share = Math.min(1, i / chainEnd)
+    const placement = pieces[i].placement
+    pieces[i] = {
+      ...pieces[i],
+      placement: { ...placement, x: placement.x - gap.x * share, y: placement.y - gap.y * share },
+    }
   }
 }
 

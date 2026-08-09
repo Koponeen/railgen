@@ -61,12 +61,15 @@ Vaiheessa 1c jaetaan siemen + asetukset, mikä mahtuu reilusti rajan alle. Käsi
 radan serialisointi tulee vaiheessa 2, ja silloin tiiviimpi binäärienkoodaus voi olla
 tarpeen.
 
+## Eleet ja kartan kehykset
+
+Ele-engine kirjoittaa näkymän transformin `#world`-elementtiin, mutta mittaa siirtymät sen
+**isäntäkehyksestä** (`world.parentNode`), ei juuri-SVG:stä. Ero ratkaisee: kun kartan ja
+ruudun välissä on mikä tahansa muunnos — kuten ruudulle sovitettu neljänneskierros — juuri-
+SVG:n koordinaatistossa mitattu veto olisi vinossa. Osumatestit käyttävät edelleen
+`world`-elementin omaa CTM:ää, koska ne haluavat millimetrit.
+
 ## Tunnetut esitystason yksityiskohdat
 
-- **Sauma näkyy pienenä lovena.** Rata ei sulkeudu geometrisesti täsmälleen, vaan
-  Vario-jousto nielee heiton (README luku 2). Piirto näyttää palat nimellisgeometriassaan,
-  joten jäännös näkyy yhtenä kapeana rakona. Kireysprosentti kertoo saman luvun numerona.
-  Jäännöksen jakaminen liitoksille myös piirrossa on luonteva parannus siinä vaiheessa, kun
-  palojen sijainteja muutenkin hienosäädetään (vaihe 2).
 - **Radan sijainti lattialla vaihtelee.** Pisteytys palkitsee täyttöasteesta muttei
   keskityksestä, joten pieni rata voi asettua lattian laitaan.
