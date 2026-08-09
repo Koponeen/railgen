@@ -71,8 +71,45 @@ describe('piece library', () => {
   it('reproduces the substitution classes README chapter 2 lists', () => {
     // Näitä ei ole kerrottu koodille missään: ne putoavat ulos porttisignatuurista.
     expect(library.substitutesFor('D').map((p) => p.id).sort()).toEqual(['DECK216', 'N', 'T', 'X'])
-    expect(library.substitutesFor('A').map((p) => p.id).sort()).toEqual(['DECK144', 'H2', 'L', 'M'])
+    expect(library.substitutesFor('A').map((p) => p.id).sort()).toEqual(['DECK144', 'H2', 'I', 'J', 'L', 'M'])
     expect(library.substitutesFor('A1').map((p) => p.id).sort()).toEqual(['H', 'O1', 'P1'])
+    expect(library.substitutesFor('E1').map((p) => p.id).sort()).toEqual(['O', 'P'])
+  })
+
+  it('puts a gender-reversed switch in the same class as its upright twin', () => {
+    // I/J, O/P ja F/G ovat sama pala liitinsukupuolet päinvastoin. Kanonisointi
+    // kokeilee kumpaakin porttia lähtökohtana, joten käänteinen pala löytää
+    // saman korvausluokan — se vain kuljetaan toisesta päästä.
+    expect(library.get('I').mainPorts.map((p) => p.connector)).toEqual(['socket', 'pin'])
+    expect(library.get('J').mainPorts.map((p) => p.connector)).toEqual(['pin', 'socket'])
+    expect(signaturesMatch(library.get('A').signatures, library.get('I').signatures)).toBe(true)
+    expect(signaturesMatch(library.get('A').signatures, library.get('J').signatures)).toBe(true)
+    expect(signaturesMatch(library.get('E1').signatures, library.get('O').signatures)).toBe(true)
+    expect(signaturesMatch(library.get('E1').signatures, library.get('P').signatures)).toBe(true)
+  })
+
+  it('matches a gender pair to each other only when the main span is achiral', () => {
+    // Suora näyttää samalta kummasta päästä tahansa, joten I ja J ovat suoraan
+    // vaihtokelpoisia. Kaari ei: takaperin kuljettuna sen kätisyys kääntyy, joten
+    // O ja P kelpaavat kumpikin E1:n paikalle mutteivät toistensa tilalle
+    // ilman uudelleensuuntaamista.
+    expect(signaturesMatch(library.get('I').signatures, library.get('J').signatures)).toBe(true)
+    expect(signaturesMatch(library.get('O').signatures, library.get('P').signatures)).toBe(false)
+    // E1 on käännettävissä nurin, joten se kattaa molemmat kätisyydet.
+    expect(library.get('E1').signatures).toHaveLength(2)
+    expect(library.get('O').signatures).toHaveLength(1)
+  })
+
+  it('gives the three-way switch both branches and the two-way switch one', () => {
+    expect(library.get('I').ports.filter((p) => p.branch).map((p) => p.id)).toEqual(['branchRight', 'branchLeft'])
+    expect(library.get('O').ports.filter((p) => p.branch)).toHaveLength(1)
+    // O:n molemmat reitit ovat E1-kaaria, joten suoraa läpimenoa ei ole.
+    expect(library.get('O').mainPorts[1].dir).toBe(1)
+  })
+
+  it('keeps pieces with unverified geometry out of the trusted set', () => {
+    // F/G sivusiirtymä on oletus kaksoisraidevälistä, ei lähteestä luettu.
+    expect(library.byTag('unverified-geometry').map((p) => p.id)).toEqual(['F', 'G'])
   })
 })
 

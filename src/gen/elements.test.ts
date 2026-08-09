@@ -142,9 +142,22 @@ describe('element traversal', () => {
     expect(partial.elements).toHaveLength(0)
   })
 
-  it('has no branch or crossing implementations until those pieces exist', () => {
-    // docs/PIECE_LIBRARY.md: vaihteiden ja risteysten mitat ovat vielä tarkistamatta.
+  it('has no branch or crossing implementations until the routing algorithm exists', () => {
+    // Palat ovat kirjastossa, mutta uuden reitin vieminen takaisin silmukkaan on
+    // oma sovitusongelmansa (toteutussuunnitelman vaihe 4).
     expect(elements.byRole('branch')).toHaveLength(0)
     expect(elements.byRole('crossing')).toHaveLength(0)
+  })
+
+  it('never builds an element out of a piece whose geometry is unverified', () => {
+    // F/G sivusiirtymä on oletus, ei lähteestä luettu — generoitu rata ei saa
+    // nojata siihen ennen kuin mitat on tarkistettu (docs/PIECE_LIBRARY.md).
+    const unverified = new Set(library.byTag('unverified-geometry').map((piece) => piece.id))
+    expect(unverified.size).toBeGreaterThan(0)
+    for (const element of elements.elements) {
+      for (const id of Object.keys(element.pieceCounts)) {
+        expect(unverified.has(id), `${element.id} uses ${id}`).toBe(false)
+      }
+    }
   })
 })

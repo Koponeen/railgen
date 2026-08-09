@@ -64,6 +64,88 @@
     ]
   },
   {
+    "id": "I",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch"],
+    "notes": "Kolmisuuntainen vaihde: suora, vasen, oikea. I ja J ovat sama pala, mutta liitinsukupuolet päinvastoin — eivät siis peilipari, koska molemmilla on jo kumpikin haara.",
+    "source": "woodenrailway.info Track Guide: I/J Curved Switch, base A + E, length 144, radius 182 — \"an A track with two E curves joined at one end\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 144 }] },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branchRight", "connector": "pin", "branch": true },
+        "path": [{ "curve": { "radiusMm": 202, "sweepDeg": 45, "hand": "right" } }]
+      },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branchLeft", "connector": "pin", "branch": true },
+        "path": [{ "curve": { "radiusMm": 202, "sweepDeg": 45, "hand": "left" } }]
+      }
+    ]
+  },
+  {
+    "id": "J",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch"],
+    "notes": "I liitinsukupuolet päinvastoin. Pääreitti kuljetaan tällöin toisesta päästä, joten pala kuuluu silti A:n korvausluokkaan.",
+    "source": "woodenrailway.info Track Guide: I/J Curved Switch, base A + E, length 144, radius 182",
+    "routes": [
+      { "from": { "id": "in", "connector": "pin" }, "to": { "id": "out", "connector": "socket" }, "path": [{ "straight": 144 }] },
+      {
+        "from": { "id": "in", "connector": "pin" },
+        "to": { "id": "branchRight", "connector": "socket", "branch": true },
+        "path": [{ "curve": { "radiusMm": 202, "sweepDeg": 45, "hand": "right" } }]
+      },
+      {
+        "from": { "id": "in", "connector": "pin" },
+        "to": { "id": "branchLeft", "connector": "socket", "branch": true },
+        "path": [{ "curve": { "radiusMm": 202, "sweepDeg": 45, "hand": "left" } }]
+      }
+    ]
+  },
+  {
+    "id": "O",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "tight"],
+    "notes": "Kaksi E1-kaarta samasta päästä: kaarre ylös tai alas, ei suoraa. O ja P ovat sama pala liitinsukupuolet päinvastoin. Kumpi kaarista on merkitty pääreitiksi on nimilappuasia — pala on symmetrinen. Huom. eri pala kuin O1/P1.",
+    "source": "woodenrailway.info Track Guide: O/P Short Curved Switch, base E1, radius 90 — \"two E1 curves joined at one end, giving you two directions: a curve up and a curve down\"",
+    "routes": [
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "out", "connector": "pin" },
+        "path": [{ "curve": { "radiusMm": 110, "sweepDeg": 45, "hand": "right" } }]
+      },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branch", "connector": "pin", "branch": true },
+        "path": [{ "curve": { "radiusMm": 110, "sweepDeg": 45, "hand": "left" } }]
+      }
+    ]
+  },
+  {
+    "id": "P",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "tight"],
+    "notes": "O liitinsukupuolet päinvastoin.",
+    "source": "woodenrailway.info Track Guide: O/P Short Curved Switch, base E1, radius 90",
+    "routes": [
+      {
+        "from": { "id": "in", "connector": "pin" },
+        "to": { "id": "out", "connector": "socket" },
+        "path": [{ "curve": { "radiusMm": 110, "sweepDeg": 45, "hand": "right" } }]
+      },
+      {
+        "from": { "id": "in", "connector": "pin" },
+        "to": { "id": "branch", "connector": "socket", "branch": true },
+        "path": [{ "curve": { "radiusMm": 110, "sweepDeg": 45, "hand": "left" } }]
+      }
+    ]
+  },
+  {
     "id": "T",
     "kind": "junction",
     "mirrorable": false,
@@ -80,6 +162,52 @@
           { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "right" } }
         ]
       }
+    ]
+  },
+  {
+    "id": "F",
+    "kind": "custom",
+    "mirrorable": false,
+    "tags": ["switch", "unverified-geometry", "off-grid", "retired"],
+    "notes": "EPÄVARMA GEOMETRIA. Lähde kertoo vain, että pala on 150 mm pitkä ja että molemmat ulostulot ovat sivussa sisääntulon keskilinjasta. Sivusiirtymäksi on oletettu +-23 mm eli kaksoisraiteen 46 mm keskeltä keskelle, koska muuta lukua ei ole. Myös palan sisäinen muoto (S-mutkat) on piirretty arvaamalla, samoin se kumpi kirjaimista on tämä variantti. Ei ole generaattorin käytössä ennen kuin mitat on tarkistettu.",
+    "source": "woodenrailway.info Track Guide: F/G Switch, base A, length 150 — \"two tracks that are both offset from the single end\"; 46 mm kaksoisraidevälistä samalta sivulta",
+    "lengthMm": 152,
+    "ports": [
+      { "id": "in", "x": 0, "y": 0, "dir": 4, "connector": "socket" },
+      { "id": "out", "x": 150, "y": -23, "dir": 0, "connector": "pin" },
+      { "id": "branch", "x": 150, "y": 23, "dir": 0, "connector": "pin", "branch": true }
+    ],
+    "pathData": "M0,0 C60,0 90,-23 150,-23 M0,0 C60,0 90,23 150,23",
+    "footprint": [
+      [
+        { "x": 0, "y": -43 },
+        { "x": 150, "y": -43 },
+        { "x": 150, "y": 43 },
+        { "x": 0, "y": 43 }
+      ]
+    ]
+  },
+  {
+    "id": "G",
+    "kind": "custom",
+    "mirrorable": false,
+    "tags": ["switch", "unverified-geometry", "off-grid", "retired"],
+    "notes": "EPÄVARMA GEOMETRIA, ks. F. Tässä liitinsukupuolet päinvastoin kuin F:ssä, samaan tapaan kuin I/J ja O/P.",
+    "source": "woodenrailway.info Track Guide: F/G Switch, base A, length 150",
+    "lengthMm": 152,
+    "ports": [
+      { "id": "in", "x": 0, "y": 0, "dir": 4, "connector": "pin" },
+      { "id": "out", "x": 150, "y": -23, "dir": 0, "connector": "socket" },
+      { "id": "branch", "x": 150, "y": 23, "dir": 0, "connector": "socket", "branch": true }
+    ],
+    "pathData": "M0,0 C60,0 90,-23 150,-23 M0,0 C60,0 90,23 150,23",
+    "footprint": [
+      [
+        { "x": 0, "y": -43 },
+        { "x": 150, "y": -43 },
+        { "x": 150, "y": 43 },
+        { "x": 0, "y": 43 }
+      ]
     ]
   },
   {

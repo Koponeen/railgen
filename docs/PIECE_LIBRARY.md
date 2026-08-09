@@ -99,12 +99,35 @@ tämän ilmoittamalla E:n ulkosäteeksi 222 mm.
 | `N1` | ramppi, kaksi tappia | 216 mm, nousu 64 mm |
 | `DECK144/216/324/360` | sillan kansi | 144, 216, 324, 360 mm, `minLevel: 1` |
 | `L`, `M` | kaarrevaihde | pääreitti 144 mm, haara E-kaari |
+| `I`, `J` | kolmisuuntainen vaihde | pääreitti 144 mm, molemmat E-haarat |
+| `O`, `P` | kaksoiskaarrevaihde | kaksi E1-kaarta, ei suoraa läpimenoa |
 | `O1`, `P1` | lyhyt kaarrevaihde | pääreitti 108 mm, haara E1-kaari |
 | `T` | T-risteys | pääreitti 216 mm, haara 90° säteellä 108 mm |
 | `X` | tähtiristeys | 216 × 216 mm, neljä porttia, neljä 108 mm:n neljännesympyrää |
 | `H`, `H1`, `H2` | risteys | 2 × 108 mm suorassa kulmassa, 2 × 116 mm suorassa kulmassa, 2 × 144 mm 45 asteessa |
 | `R`, `S` | puskuri | 40 mm, yksi portti |
 | `U`, `V` | ajoramppi | 54 mm, yksi portti |
+| `F`, `G` | rinnakkaisvaihde | 150 mm, ulostulot ±23 mm sivussa — **geometria epävarma, ks. alla** |
+
+### Sukupuolipari vs. peilipari
+
+Vaihteita ei voi kääntää nurin, joten variantteja tarvitaan. Kirjaimet kulkevat parina
+kahdella eri tavalla:
+
+- **Peilipari** (`L`/`M`, `O1`/`P1`): sama pala vasemmalle ja oikealle kaartuvana. Vain
+  toinen haara kummassakin.
+- **Sukupuolipari** (`I`/`J`, `O`/`P`, `F`/`G`): sama pala, liitinsukupuolet päinvastoin.
+  Näissä on jo molemmat haarat, joten peilaus ei tuottaisi uutta palaa.
+
+Käänteinen variantti päätyy silti samaan korvausluokkaan: signatuurin kanonisointi kokeilee
+kumpaakin porttia lähtökohtana, joten `J` kelpaa `A`:n paikalle — se vain kuljetaan toisesta
+päästä. Testit tarkistavat tämän.
+
+Yksi hienovaraisuus: **suora on akiraalinen, kaari ei.** `I` ja `J` ovat suoraan toistensa
+tilalle vaihdettavissa, koska suora näyttää samalta kummasta päästä tahansa. `O` ja `P`
+kelpaavat kumpikin `E1`:n paikalle, mutteivät toistensa tilalle — takaperin kuljettuna
+kaaren kätisyys kääntyy. `E1` itse kattaa molemmat kätisyydet, koska sen voi kääntää nurin
+(`mirrorable: true`) ja se saa siksi kaksi signatuuria; vaihde saa yhden.
 
 `DECK*`-tunnukset ovat kuvailevia: lähde antaa kansien pituudet muttei BRIO:n kirjainkoodeja.
 
@@ -116,8 +139,20 @@ tämän ilmoittamalla E:n ulkosäteeksi 222 mm.
 - **`L`/`M` ja `O1`/`P1` puolisuus.** Lähde kertoo, että ne ovat pari, muttei kumpi kirjain
   on kumpi puoli. Geometria on molemmille oikein; vain nimilappu voi olla väärinpäin.
 - **`R`/`S` ja `U`/`V` liitinsukupuoli.** Sama tilanne: pari on varma, kirjain–sukupuoli ei.
-- **Vaihteiden haaraportin liitinsukupuoli.** Mallinnettu tapiksi kuten pääreitin ulostulo.
+- **Sukupuoliparien kirjainjärjestys.** `I`/`J`, `O`/`P` ja `F`/`G` ovat sama pala
+  liitinsukupuolet päinvastoin; kumpi kirjain on kumpi variantti, ei ole varmistettu.
+- **Vaihteiden haaraportin liitinsukupuoli.** Mallinnettu samaksi kuin pääreitin ulostulo.
   Lähde ei kerro tätä.
+
+### Epävarma geometria: `F` ja `G`
+
+Nämä ovat mukana mutta merkitty `unverified-geometry`-tagilla, ja **generaattori ei käytä
+niitä** — testi tarkistaa, ettei yksikään elementti viittaa tagattuun palaan.
+
+Lähde kertoo vain pituuden (150 mm) ja sen, että molemmat ulostulot ovat sivussa
+sisääntulon keskilinjasta. Sivusiirtymäksi on oletettu ±23 mm, koska kaksoisraide on
+lähteen mukaan 46 mm keskeltä keskelle eikä muuta lukua ole tarjolla. Myös palan sisäinen
+muoto on piirretty arvaamalla. Kun oikeat mitat löytyvät, tagi pois ja luvut tilalle.
 
 ## Odottavat palat
 
@@ -126,12 +161,9 @@ lähteestä äläkä arvaa* (CLAUDE.md). Kukin on yhden datarivin työ, kun tied
 
 | Pala | Mikä puuttuu |
 |---|---|
-| `I`, `J` (kolmisuuntainen kaarrevaihde) | Geometria on selvä (A + kaksi E-kaarta samasta päästä), mutta lähde ei kerro, **miten I ja J eroavat toisistaan** — molemmilla on sekä vasen että oikea haara, joten ero ei voi olla puolisuus. |
-| `O`, `P` (kaksihaarainen E1-vaihde) | Sama tilanne: kaksi E1-kaarta samasta päästä, ero I/J:n tapaan tuntematon. |
-| `F`, `G` (vaihde 150 mm) | Rinnakkaisraiteiden sivusiirtymää ei kerrota. |
 | `F1`, `G1`, `F2`, `G2` (rinnakkaisvaihteet) | Haaraporttien sijainnit; kaksoisraiteen 46 mm:n väli tiedetään, muttei haaran kiinnityskohtaa. |
-| `H3` (kaariristeys) | Kahden E-kaaren keskinäistä risteämiskulmaa ei kerrota. |
-| `Q` (viisipistevaihde) | **Sisäkäännökset ovat 22,5°**, mikä ei osu 45°:n porttilokeroihin. Vaatisi porttimallin laajennuksen, ei pelkkää dataa. |
+| `H3` (kaariristeys) | Kahden E-kaaren keskinäistä risteämiskulmaa ei kerrota. Ei ilmeisesti enää valmistuksessa — selvitetään myöhemmin. |
+| `Q` (viisipistevaihde) | Lähde kertoo mitat: ulkokäännökset 45°, **sisäkäännökset 22,5°**. Jälkimmäinen ei osu 45°:n porttilokeroihin, joten pala vaatisi porttimallin laajennuksen eikä pelkkää datariviä. Ei ilmeisesti enää valmistuksessa — lykätty. |
 | `EE`, `EE1`, `K`, `K1` (kaksoisraidepalat) | Geometria on johdettavissa (46 mm väli), mutta palamalli olettaa yhden pääreitin. Kaksoisraidepala tarvitsisi käsitteen "kaksi rinnakkaista pääreittiä". |
 | Taipuva pala | Pituushaarukka ja maksimitaivutus omistajan 3D-tulosteesta (parametrit ovat dataa, ks. `FlexSettings`). |
 | IKEA Lillabo -osat | Mitat. |

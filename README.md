@@ -234,8 +234,9 @@ Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
 Vaiheet 1a ja 1b eivät vielä näy käyttöliittymässä — sivut tulevat vaiheessa 1c.
 
 Palakirjasto kattaa suorat sukupuolivariantteineen, kaaret, rampit, sillan kannet,
-kaarrevaihteet, T- ja tähtiristeykset, ristit ja puskurit. Loput odottavat lähdetietoa;
-`docs/PIECE_LIBRARY.md` kertoo kustakin, mikä täsmälleen puuttuu.
+vaihteet, T- ja tähtiristeykset, ristit ja puskurit. Loput odottavat lähdetietoa;
+`docs/PIECE_LIBRARY.md` kertoo kustakin, mikä täsmälleen puuttuu, ja erottaa lähteestä
+luetut mitat siitä mitä on johdettu.
 
 ```
 npm install
