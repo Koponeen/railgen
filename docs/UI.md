@@ -1,6 +1,6 @@
 # Käyttöliittymä
 
-Toteuttaa README luvun 7 sivut 1, 2, 3-minimi ja 4. Puhelin ensin: kaikki ratkaisut on
+Toteuttaa README luvun 7 sivut 1, 2, 3 ja 4. Puhelin ensin: kaikki ratkaisut on
 testattu 390 × 844 px:n ruudulla sormella, ei hiirellä.
 
 ## Rakenne
@@ -9,10 +9,11 @@ testattu 390 × 844 px:n ruudulla sormella, ei hiirellä.
 App.tsx              sivujen valinta, asetusten tallennus, generoinnin ajastus
 pages/AreaPage       sivu 1: alue (suorakaide / L, pikakoot, esikatselu)
 pages/InventoryPage  sivu 2: palat, skippaus, joustopala
-pages/GeneratePage   sivu 3 minimi: kartta + generoi uudelleen + siemen
+pages/GeneratePage   sivu 3: kartta + generoi uudelleen + piirto + siemen
 pages/ResultPage     sivu 4: kartta, mitat, osaluettelo, PNG, tulostus, jako
 TrackMap.tsx         Preact-kääre imperatiiviselle kartalle
 mapEngine.ts         kartan tila, eleet ja piirto (Preactin ulkopuolella)
+drawing.ts           piirretyn radan tila ja virheilmoitukset
 components.tsx       stepper, valinta, kytkin, kortti, toimintorivi
 ```
 
@@ -31,6 +32,21 @@ ja radan. Preact ei koskaan renderöi kartan sisältöä uudelleen.
 - **Tumma tila** alusta asti `prefers-color-scheme`-perusteisesti.
 - **Yksi näkymä = yksi tehtävä.** Ensikäytössä lineaarinen polku 1 → 2 → 3 → 4; kun
   localStoragessa on asetukset, avataan suoraan sivu 3.
+
+## Piirtotila
+
+Piirtotila on eksplisiittinen ja lyhytikäinen (README luku 7): toimintorivin nappi kytkee
+sen päälle, yksi veto sovitetaan (`src/fit/`, ks. DRAWING.md), ja kartta palauttaa tilan
+itse katseluun. Preact ei siis omista tilaa yksin — kartta kertoo snapshotissaan milloin
+veto päättyi, ja sivu seuraa perässä.
+
+Kaksi sormea navigoi aina ja peruu kesken olevan vedon. Piirretty viiva jää kartalle
+haaleana radan alle (`.line.guide`): käyttäjän pitää nähdä sekä se mitä hän piirsi että se
+mitä siitä tuli. Piirtotila näkyy myös kartan reunuksessa, ei pelkkänä painettuna nappina
+alalaidassa.
+
+Piirretty rata syrjäyttää generoidun, kunnes käyttäjä generoi uudelleen tai muuttaa
+asetuksia — molemmat elävät `App.tsx`:ssä rinnakkain, joten paluu on aina auki.
 
 ## Pyöritys on esitystason asia
 
@@ -57,9 +73,9 @@ saa sisältää mitä tahansa tekstiä, myös kenttäerottimen ja emojit. Jos li
 merkkiä, palautetaan `tooLong` ja käyttäjälle näytetään rehellinen ilmoitus — katkaistua
 URL:ia ei koskaan tarjota (R6).
 
-Vaiheessa 1c jaetaan siemen + asetukset, mikä mahtuu reilusti rajan alle. Käsin muokatun
-radan serialisointi tulee vaiheessa 2, ja silloin tiiviimpi binäärienkoodaus voi olla
-tarpeen.
+Jaossa on siemen + asetukset, mikä mahtuu reilusti rajan alle. Piirrettyä rataa ei vielä
+jaeta linkillä: se ei synny siemenestä, joten sen jakaminen vaatii radan oman
+serialisoinnin ja siihen tiiviin binäärienkoodauksen (R6).
 
 ## Eleet ja kartan kehykset
 

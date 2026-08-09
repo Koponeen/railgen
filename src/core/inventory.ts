@@ -16,6 +16,22 @@ export function unlimitedInventory(): Inventory {
 }
 
 /**
+ * Mitä käyttö vaatisi lisää ("vaatisi 2×E lisää"). Kirjanpidon oma
+ * `shortages()` riittää kun rata on rakennettu inventaariota vasten, mutta
+ * piirretty rata sovitetaan tarvittaessa rajattomilla paloilla — silloin
+ * puutteet on laskettava valmiista käytöstä.
+ */
+export function shortagesAgainst(usage: Readonly<Record<string, number>>, inventory: Inventory): Record<string, number> {
+  if (inventory.unlimited) return {}
+  const result: Record<string, number> = {}
+  for (const [id, count] of Object.entries(usage)) {
+    const missing = count - (inventory.counts[id] ?? 0)
+    if (missing > 0) result[id] = missing
+  }
+  return result
+}
+
+/**
  * Käytön kirjanpito. Epäonnistunut mutaatio hylätään siististi, joten
  * kirjanpidosta pitää voida ottaa kopio ja palata siihen (CLAUDE.md).
  */

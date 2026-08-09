@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { defaultLibrary } from '../core/library'
 import { seedFromInput, seedToString } from '../core/rng'
+import { fitDrawing } from '../fit'
 import { generate, type GenerateResult } from '../gen/generate'
 import { t } from '../i18n'
+import type { DrawingState } from './drawing'
+import type { Point } from './state'
 import { AreaPage } from './pages/AreaPage'
 import { GeneratePage } from './pages/GeneratePage'
 import { InventoryPage } from './pages/InventoryPage'
@@ -48,6 +51,11 @@ export function App() {
   const [busy, setBusy] = useState(false)
   const pendingRef = useRef<number | null>(null)
 
+  // Piirretty rata syrjäyttää generoidun, kunnes käyttäjä generoi uudelleen tai
+  // muuttaa asetuksia. Molemmat elävät rinnakkain, joten paluu on aina auki.
+  const [drawing, setDrawing] = useState<DrawingState | null>(null)
+  const [drawMode, setDrawMode] = useState(false)
+
   useEffect(() => {
     saveSettings({ ...settings, seed })
   }, [settings, seed])
@@ -80,8 +88,37 @@ export function App() {
     if (page === 'generate' || page === 'result') run(seed)
   }, [page, seed, run])
 
-  const patch = (next: Partial<AppSettings>) => setSettings((current) => ({ ...current, ...next }))
+  /** Sovitus on synkronista ja nopeaa, joten se ajetaan suoraan sormen noustessa. */
+  const handleDraw = useCallback(
+    (points: Point[]) => {
+      setDrawMode(false)
+      setDrawing({
+        points,
+        result: fitDrawing(points, {
+          area: settings.area,
+          library,
+          inventory: toInventory(settings),
+          flex: toFlexSettings(settings),
+        }),
+      })
+    },
+    [settings, library],
+  )
+
+  // Asetusten muutos mitätöi piirretyn radan: se on sovitettu vanhaan alueeseen
+  // ja vanhaan inventaarioon.
+  const patch = (next: Partial<AppSettings>) => {
+    setDrawing(null)
+    setSettings((current) => ({ ...current, ...next }))
+  }
+
+  const startOver = (nextSeed: string) => {
+    setDrawing(null)
+    setSeed(nextSeed)
+  }
+
   const winner = result?.winner ?? null
+  const track = drawing?.result.track ?? winner?.track ?? null
   const seedLabel = useMemo(() => seedToString(seedFromInput(seed)), [seed])
 
   return (
@@ -96,8 +133,12 @@ export function App() {
             result={result}
             busy={busy}
             seedLabel={seed}
-            onSeedChange={setSeed}
-            onRegenerate={() => setSeed(randomSeed())}
+            drawMode={drawMode}
+            drawing={drawing}
+            onDrawModeChange={setDrawMode}
+            onDraw={handleDraw}
+            onSeedChange={startOver}
+            onRegenerate={() => startOver(randomSeed())}
             onShowResult={() => setPage('result')}
           />
         ) : null}
@@ -105,9 +146,10 @@ export function App() {
           <ResultPage
             area={settings.area}
             library={library}
-            track={winner?.track ?? null}
+            track={track}
             settings={settings}
             seedLabel={seedLabel}
+            drawn={drawing?.result.track != null}
           />
         ) : null}
       </main>

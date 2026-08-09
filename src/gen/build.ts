@@ -128,9 +128,37 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
   // sen jälkeen kun jäännös jaetaan liitoksille.
   relaxClosure(pieces, gap, previous)
 
+  return summariseTrack(
+    {
+      pieces,
+      joints,
+      closure,
+      usage: ledger.usage(),
+      shortages: ledger.shortages(),
+      areaBounds: areaBounds(context.mask),
+    },
+    library,
+  )
+}
+
+export interface TrackSummaryInput {
+  pieces: PlacedPiece[]
+  joints: [number, number][]
+  closure: ClosureReport
+  usage: Record<string, number>
+  shortages: Record<string, number>
+  areaBounds: BBox
+}
+
+/**
+ * Kokoaa valmiista paloista radan mittoineen. Sekä generointi että piirretyn
+ * viivan sovitus päätyvät tähän, jotta pituus, äärimitat ja törmäyslaskenta
+ * tulevat molemmille samasta paikasta.
+ */
+export function summariseTrack(input: TrackSummaryInput, library: PieceLibrary): Track {
+  const { pieces, joints, areaBounds: area } = input
   const footprints = pieces.map((placed) => placedFootprint(placed, library.get(placed.pieceId)))
   const bbox = unionBBox(footprints.flat().map(polygonBBox))
-  const area = areaBounds(context.mask)
   const fitsArea = bbox.minX >= area.minX && bbox.minY >= area.minY && bbox.maxX <= area.maxX && bbox.maxY <= area.maxY
 
   return {
@@ -138,9 +166,9 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
     joints,
     lengthMm: pieces.reduce((sum, placed) => sum + library.get(placed.pieceId).lengthMm, 0),
     bbox,
-    closure,
-    usage: ledger.usage(),
-    shortages: ledger.shortages(),
+    closure: input.closure,
+    usage: input.usage,
+    shortages: input.shortages,
     maxLevel: pieces.reduce((max, placed) => Math.max(max, placed.placement.level + library.get(placed.pieceId).levelDelta), 0),
     fitsArea,
     collisions: countCollisions(pieces, library, joints),
@@ -157,7 +185,7 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
  * kaukana turvakatosta. Tämä on sama malli jota `evaluateClosure` jo laskee,
  * nyt vain myös geometriassa.
  */
-function relaxClosure(pieces: PlacedPiece[], gap: Vec, chainEnd: number): void {
+export function relaxClosure(pieces: PlacedPiece[], gap: Vec, chainEnd: number): void {
   if (chainEnd < 1) return
   for (let i = 0; i < pieces.length; i += 1) {
     // Sivuhaaran palat ovat taulukossa kiinnityskohtansa jäljessä, joten ne

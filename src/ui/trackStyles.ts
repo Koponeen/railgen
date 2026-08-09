@@ -50,6 +50,7 @@ function rules(palette: TrackPalette): string {
 .piece.selected .piece-board { stroke: ${palette.accent}; }
 .piece.selected .piece-groove { stroke: ${palette.floor}; opacity: 0.5; }
 .line.draft { fill: none; stroke: ${palette.accent}; stroke-width: 6; stroke-dasharray: 4 14; stroke-linecap: round; }
+.line.guide { fill: none; stroke: ${palette.accent}; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }
 `
 }
 

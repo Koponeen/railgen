@@ -18,10 +18,12 @@ interface ResultPageProps {
   track: Track | null
   settings: AppSettings
   seedLabel: string
+  /** Onko näytössä piirretty rata? Se ei synny siemenestä eikä siis jaettavissa. */
+  drawn?: boolean
 }
 
 /** Sivu 4: tulos. Kuva, mitat, osaluettelo, vienti ja jako (README luku 7). */
-export function ResultPage({ area, library, track, settings, seedLabel }: ResultPageProps) {
+export function ResultPage({ area, library, track, settings, seedLabel, drawn = false }: ResultPageProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [shareState, setShareState] = useState<'idle' | 'copied' | 'too-long' | 'failed'>('idle')
 
@@ -88,10 +90,14 @@ export function ResultPage({ area, library, track, settings, seedLabel }: Result
               <dd>{formatNumber(track.maxLevel + 1)}</dd>
             </div>
           ) : null}
-          <div>
-            <dt>{t('generate.seed')}</dt>
-            <dd class="mono">{seedLabel}</dd>
-          </div>
+          {/* Piirretty rata ei synny siemenestä, joten siemenen näyttäminen
+              sen kohdalla lupaisi toistettavuutta jota ei ole. */}
+          {drawn ? null : (
+            <div>
+              <dt>{t('generate.seed')}</dt>
+              <dd class="mono">{seedLabel}</dd>
+            </div>
+          )}
         </dl>
       </Card>
 
@@ -121,6 +127,8 @@ export function ResultPage({ area, library, track, settings, seedLabel }: Result
         </Card>
       ) : null}
 
+      {drawn ? <p class="hint">{t('result.share.drawn')}</p> : null}
+
       {shareState !== 'idle' ? (
         <p class={shareState === 'copied' ? 'hint' : 'hint warning'}>{t(`result.share.${shareState}`)}</p>
       ) : null}
@@ -136,7 +144,7 @@ export function ResultPage({ area, library, track, settings, seedLabel }: Result
         <button type="button" class="action" onClick={() => window.print()}>
           {t('result.print')}
         </button>
-        <button type="button" class="action primary" onClick={() => void share()}>
+        <button type="button" class="action primary" onClick={() => void share()} disabled={drawn}>
           {t('result.share.button')}
         </button>
       </ActionBar>

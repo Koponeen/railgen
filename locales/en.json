@@ -90,6 +90,22 @@
       "outside-area": "The track does not fit the area. Try a larger area."
     }
   },
+  "draw": {
+    "start": "Draw",
+    "cancel": "Stop drawing",
+    "hint": "Draw the track with one finger. Two fingers cancel and navigate.",
+    "fitted": "Drawn track: {pieces} pieces · {length} m · off by {deviation} mm",
+    "shortage": "Not enough pieces: missing {pieces}.",
+    "shortageItem": "{count}×{piece}",
+    "failure": {
+      "unknown": "The stroke did not turn into a track.",
+      "drawing-too-short": "The stroke is too short for a track. Draw a longer one.",
+      "no-fit": "No combination of pieces follows that stroke. Try a gentler shape.",
+      "closure-beyond-budget": "The loop does not close. Draw a rounder loop or enable the flex piece.",
+      "joint-over-safety-cap": "One joint would be too sharp. Draw a gentler shape.",
+      "self-collision": "The track would run into itself. Crossing tracks come later."
+    }
+  },
   "result": {
     "title": "Track",
     "empty": "Generate a track first.",
@@ -107,6 +123,7 @@
       "button": "Share",
       "copied": "Link copied.",
       "too-long": "The track is too large to share as a link.",
+      "drawn": "A drawn track cannot be shared as a link yet — the link would only reproduce the generated track.",
       "failed": "Sharing failed."
     }
   },

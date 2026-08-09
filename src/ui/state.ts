@@ -31,7 +31,10 @@ export interface AppState {
   track: Track | null
   /** Valittu pala `track.pieces`-indeksinä. */
   selectedPiece: number | null
-  /** Vapaalla kädellä piirretyt viivat (vaihe 2 ottaa nämä käyttöön). */
+  /**
+   * Vapaalla kädellä piirretyt viivat. Sovituksen jälkeen viiva jää kartalle
+   * haaleana: käyttäjä näkee mitä hän piirsi ja mitä siitä tuli.
+   */
   lines: DrawnLine[]
 }
 

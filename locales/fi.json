@@ -90,6 +90,22 @@
       "outside-area": "Rata ei mahdu alueelle. Kokeile suurempaa aluetta."
     }
   },
+  "draw": {
+    "start": "Piirrä",
+    "cancel": "Lopeta piirto",
+    "hint": "Piirrä rata yhdellä sormella. Kaksi sormea peruu ja navigoi.",
+    "fitted": "Piirretty rata: {pieces} palaa · {length} m · poikkeama {deviation} mm",
+    "shortage": "Palat eivät riitä: puuttuu {pieces}.",
+    "shortageItem": "{count}×{piece}",
+    "failure": {
+      "unknown": "Viivasta ei saanut rataa.",
+      "drawing-too-short": "Viiva on liian lyhyt radaksi. Piirrä pidempi.",
+      "no-fit": "Viivalle ei löytynyt palayhdistelmää. Kokeile loivempaa muotoa.",
+      "closure-beyond-budget": "Silmukka ei sulkeudu. Piirrä pyöreämpi lenkki tai ota joustopala käyttöön.",
+      "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Piirrä loivempi muoto.",
+      "self-collision": "Rata osuisi itseensä. Risteävät radat tulevat myöhemmin."
+    }
+  },
   "result": {
     "title": "Rata",
     "empty": "Generoi ensin rata.",
@@ -107,6 +123,7 @@
       "button": "Jaa",
       "copied": "Linkki kopioitu.",
       "too-long": "Rata on liian suuri linkkijakoon.",
+      "drawn": "Piirrettyä rataa ei voi vielä jakaa linkillä — linkki toistaisi vain generoidun radan.",
       "failed": "Jakaminen ei onnistunut."
     }
   },

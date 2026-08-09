@@ -29,6 +29,12 @@ export function render(world: SVGGElement, state: AppState, draft: Point[] | nul
   world.replaceChildren()
   world.appendChild(buildFloor(state.area))
 
+  // Piirretty viiva jää radan alle haaleaksi: sovitus on tulkinta aikomuksesta,
+  // ja käyttäjän pitää nähdä molemmat (README luku 5).
+  for (const line of state.lines) {
+    if (line.points.length >= 2) world.appendChild(buildLinePath(line.points, 'line guide'))
+  }
+
   if (state.track) {
     const track = buildTrackGroup(state.track, library)
     if (state.selectedPiece !== null) {
@@ -38,7 +44,7 @@ export function render(world: SVGGElement, state: AppState, draft: Point[] | nul
   }
 
   if (draft && draft.length >= 2) {
-    world.appendChild(buildDraftPath(draft))
+    world.appendChild(buildLinePath(draft, 'line draft'))
   }
 }
 
@@ -67,10 +73,10 @@ function gridLine(x1: number, y1: number, x2: number, y2: number): SVGLineElemen
   return line
 }
 
-function buildDraftPath(points: Point[]): SVGPathElement {
+function buildLinePath(points: readonly Point[], className: string): SVGPathElement {
   const path = document.createElementNS(SVG_NS, 'path')
   path.setAttribute('d', points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '))
-  path.setAttribute('class', 'line draft')
+  path.setAttribute('class', className)
   return path
 }
 

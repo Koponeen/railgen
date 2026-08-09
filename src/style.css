@@ -280,6 +280,13 @@ body {
   background: var(--surface-sunken);
 }
 
+/* Piirtotila on eksplisiittinen ja lyhytikäinen, joten se pitää näkyä kartalla
+   asti — ei pelkkänä painettuna nappina alalaidassa. */
+.map-wrap.drawing {
+  box-shadow: inset 0 0 0 3px var(--accent);
+  cursor: crosshair;
+}
+
 .map {
   display: block;
   width: 100%;
@@ -451,6 +458,14 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
+}
+
+/* Päällä oleva tila (piirto) erottuu reunuksella, ei täytöllä: primary-nappi on
+   varattu sivun päätoiminnolle. */
+.action.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--accent);
 }
 
 .action:disabled {
