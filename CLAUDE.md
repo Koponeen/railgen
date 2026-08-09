@@ -22,7 +22,9 @@ Selaimessa toimiva BRIO-puujunaratojen layoutgeneraattori. **Koko suunnitteluspe
 
 ## Työskentelykäytännöt
 
-- Käyttöliittymän ja dokumentaation kieli: **suomi**. Koodin tunnisteet ja kommentit englanniksi.
+- **Monikielisyys (i18n) alusta asti**: kaikki UI-tekstit käännösavaimina erillisissä lokaalitiedostoissa (`locales/fi.json`, `locales/en.json`, …). Suomi on oletuskieli ja `fi.json` referenssi. Uusi kieli = uusi JSON-tiedosto, ei koodimuutoksia. Yhtään käyttäjälle näkyvää merkkijonoa ei kovakoodata.
+- Dokumentaation kieli: **suomi**. Koodin tunnisteet, kommentit, tiedostonimet, URL:t ja parametrit englanniksi. Commit-viestit englanniksi.
+- Toteutussuunnitelma vaiheineen ja mallivalintoineen: `docs/IMPLEMENTATION_PLAN.md`. Scope-ristiriitojen ratkaisut on kirjattu sinne (luku 1) — älä ratkaise samoja asioita uudelleen lennossa.
 - Toteutusjärjestys README:n luvussa 10 — vaihe 0 on elerunko puhelimella. Älä hyppää edelle.
 - Lähdedata (mitat, ekvivalenssit, Solver-taulukko) perustuu woodenrailway.info-sivustoon; linkit README:n lopussa. Jos mitat epäilyttävät, tarkista lähteestä äläkä arvaa.
 - Omistaja lisää custom-paloja (mm. 3D-tulostettu taipuva pala, IKEA Lillabo -osat) admin-palakirjaston kautta.
