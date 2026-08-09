@@ -1,0 +1,20 @@
+{
+  "app": {
+    "title": "BRIO-ratageneraattori"
+  },
+  "toolbar": {
+    "label": "Työkalut",
+    "draw": "Piirrä",
+    "undo": "Kumoa",
+    "redo": "Tee uudelleen",
+    "fit": "Koko näkymä"
+  },
+  "hud": {
+    "mode": {
+      "view": "katselu",
+      "draw": "piirto"
+    },
+    "summary": "tila: {mode} · zoom: {zoom} · viivoja: {count}",
+    "selected": "valittu"
+  }
+}

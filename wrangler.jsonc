@@ -1,0 +1,11 @@
+{
+  // Cloudflare Workers static assets -hosting (README luku 9).
+  // Worker on jo luotu Cloudflaren puolella — tarkista että "name" täsmää siihen.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "railgen",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

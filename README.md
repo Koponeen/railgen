@@ -215,3 +215,24 @@ Jokainen vaihe on itsenäisesti julkaistava.
 - [Track Distance Solver](https://woodenrailway.info/layout/tracksolver.html) — 18 mm grid, täyttötaulukko
 - [Basic Loops](https://woodenrailway.info/layout/guide/basicloop.html) — L–A1–M ym. liitäntämitoitukset
 - Sivuston risteysohjeet (Sidings-sivut) hyviä elementtikirjaston pohjaksi; layout-oppaat mitoitettu liian isoille radoille.
+
+---
+
+## Kehitys
+
+Vaihe 0 (elerunko + infra, ks. `docs/IMPLEMENTATION_PLAN.md`) on toteutettu: Vite + TypeScript +
+Preact -pohja, oma i18n-moduuli (`locales/fi.json` on referenssi), Vitest ja Cloudflare-julkaisu.
+
+```
+npm install
+npm run dev        # kehityspalvelin
+npm run typecheck
+npm run test        # Vitest
+npm run build        # -> dist/
+npm run deploy         # build + wrangler deploy (Cloudflare Workers static assets)
+```
+
+Testaa eleet oikealla puhelimella (tai selaimen laitesimulaattorilla): kahden sormen
+nipistys/veto zoomaa/panoroi aina, yksi sormi panoroi/valitsee katselutilassa, "Piirrä"-nappi
+avaa lyhytikäisen piirtotilan yhdeksi vedoksi kerrallaan. Kartta on imperatiivinen saareke
+(`src/ui/mapEngine.ts`) Preact-kromin (`src/ui/App.tsx`) ympärillä.

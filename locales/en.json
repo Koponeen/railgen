@@ -1,0 +1,20 @@
+{
+  "app": {
+    "title": "BRIO Track Generator"
+  },
+  "toolbar": {
+    "label": "Tools",
+    "draw": "Draw",
+    "undo": "Undo",
+    "redo": "Redo",
+    "fit": "Fit view"
+  },
+  "hud": {
+    "mode": {
+      "view": "view",
+      "draw": "draw"
+    },
+    "summary": "mode: {mode} · zoom: {zoom} · lines: {count}",
+    "selected": "selected"
+  }
+}
