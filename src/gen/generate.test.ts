@@ -72,7 +72,7 @@ describe('generation pipeline', () => {
       const track = result.winner.track
       expect(track.collisions, seed).toBe(0)
       expect(track.fitsArea, seed).toBe(true)
-      expect(countCollisions(track.pieces, library), seed).toBe(0)
+      expect(countCollisions(track.pieces, library, track.joints), seed).toBe(0)
       expect(track.bbox.minX, seed).toBeGreaterThanOrEqual(0)
       expect(track.bbox.maxX, seed).toBeLessThanOrEqual(LIVING_ROOM.widthMm)
     }
@@ -128,9 +128,9 @@ describe('determinism', () => {
     // Nämä arvot lukitsevat koko putken: reitti, elementtivalinnat, mutaatiot,
     // täyttö ja pisteytys. Jos jokin näistä muuttuu, testi kaatuu tarkoituksella.
     const golden: Record<string, string> = {
-      olohuone: '44:1a817h1',
-      matto: '48:18wr87t',
-      'kaisan rata': '50:1na9lvt',
+      olohuone: '45:rpcxsm',
+      matto: '45:1w9qf2z',
+      'kaisan rata': '50:18biq1s',
     }
     for (const [seed, expected] of Object.entries(golden)) {
       const result = run({ seed })
@@ -194,16 +194,29 @@ describe('mutations', () => {
     expect(blocked.every((m) => m.reason === 'no-branch-element' || m.reason === 'no-crossing-element')).toBe(true)
   })
 
-  it('builds a hill only when flipping connectors is allowed', () => {
-    const strict = run({ seed: 'maki', mutationsPerCandidate: 8 })
-    const flexible = run({ seed: 'maki', mutationsPerCandidate: 8, allowConnectorFlip: true })
+  it('builds hills with strictly correct connector genders, no adapter setting needed', () => {
+    const result = run({ seed: 'maki', mutationsPerCandidate: 10 })
+    const withHill = result.candidates.filter((c) => c.mutations.some((m) => m.id === 'hill' && m.applied))
+    expect(withHill.length).toBeGreaterThan(0)
+    expect(Math.max(...withHill.map((c) => c.track.maxLevel))).toBe(1)
+    for (const candidate of withHill) {
+      // Sukupuolenvaihtajat kuuluvat mäkeen, eivät yleiseen täyttöön.
+      expect(candidate.track.usage.N).toBeGreaterThan(0)
+      expect(candidate.track.usage.C2).toBe(candidate.track.usage.B2)
+    }
+  })
 
-    const strictHills = strict.candidates.flatMap((c) => c.mutations).filter((m) => m.id === 'hill')
-    expect(strictHills.every((m) => !m.applied && m.reason === 'requires-connector-flip')).toBe(true)
-    expect(strict.winner!.track.maxLevel).toBe(0)
-
-    expect(flexible.candidates.some((c) => c.mutations.some((m) => m.id === 'hill' && m.applied))).toBe(true)
-    expect(Math.max(...flexible.candidates.map((c) => c.track.maxLevel))).toBe(1)
+  it('drops sidings with buffer stops onto straight runs', () => {
+    const result = run({ seed: 'sivuraide', mutationsPerCandidate: 10 })
+    const withSiding = result.candidates.filter((c) => c.mutations.some((m) => m.id === 'siding' && m.applied))
+    expect(withSiding.length).toBeGreaterThan(0)
+    for (const candidate of withSiding) {
+      const usedSwitch = ['L', 'M', 'O1', 'P1'].some((id) => (candidate.track.usage[id] ?? 0) > 0)
+      expect(usedSwitch).toBe(true)
+      expect(candidate.track.usage.R).toBeGreaterThan(0)
+      expect(candidate.track.closure.ok).toBe(true)
+      expect(candidate.track.collisions).toBe(0)
+    }
   })
 
   it('keeps the loop closed after every accepted mutation', () => {

@@ -1,0 +1,136 @@
+[
+  {
+    "id": "L",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "basic"],
+    "notes": "L ja M ovat peilipari. Vaihdetta ei voi kääntää nurin (kielet ovat päällä), joten kummallekin puolelle on oma palansa; kumpi kirjain on kumpi puoli, ei ole varmistettu.",
+    "source": "woodenrailway.info Track Guide: L/M Curved Switch, base A + E, length 144, radius 182 — \"an A track and an E track joined at one end\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 144 }] },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branch", "connector": "pin", "branch": true },
+        "path": [{ "curve": { "radiusMm": 202, "sweepDeg": 45, "hand": "right" } }]
+      }
+    ]
+  },
+  {
+    "id": "M",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "basic"],
+    "notes": "L:n peilipari.",
+    "source": "woodenrailway.info Track Guide: L/M Curved Switch, base A + E, length 144, radius 182",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 144 }] },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branch", "connector": "pin", "branch": true },
+        "path": [{ "curve": { "radiusMm": 202, "sweepDeg": 45, "hand": "left" } }]
+      }
+    ]
+  },
+  {
+    "id": "O1",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "tight"],
+    "notes": "O1 ja P1 ovat peilipari; kumpi kirjain on kumpi puoli, ei ole varmistettu. Huom. eri pala kuin O/P.",
+    "source": "woodenrailway.info Track Guide: O1/P1 Short Curved Switch, base A1 + E1, length 108, radius 90 — \"a straight track, A1, joined with a short curve, E1, at one end\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 108 }] },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branch", "connector": "pin", "branch": true },
+        "path": [{ "curve": { "radiusMm": 110, "sweepDeg": 45, "hand": "right" } }]
+      }
+    ]
+  },
+  {
+    "id": "P1",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "tight"],
+    "notes": "O1:n peilipari.",
+    "source": "woodenrailway.info Track Guide: O1/P1 Short Curved Switch, base A1 + E1, length 108, radius 90",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 108 }] },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branch", "connector": "pin", "branch": true },
+        "path": [{ "curve": { "radiusMm": 110, "sweepDeg": 45, "hand": "left" } }]
+      }
+    ]
+  },
+  {
+    "id": "T",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "tee"],
+    "notes": "Haarasäde on 108 mm keskilinjalta (= 88 mm sisäsäde + puoli laudanleveyttä). Lähde selittää saman: säde on 2 mm E1:tä tiukempi, koska suora sivu on D — ja 216/2 = 108.",
+    "source": "woodenrailway.info Track Guide: T T-Switch, base D + E1†, length 216, radius 88 — \"three directions at 90 degree angles to one another\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 216 }] },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "branch", "connector": "pin", "branch": true },
+        "path": [
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "right" } },
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "right" } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "X",
+    "kind": "junction",
+    "mirrorable": false,
+    "tags": ["switch", "crossing", "star"],
+    "notes": "Tähtiristeys täyttää yhden loogisen solun (216 x 216 mm): portit solun sivujen keskellä, molemmat suorat läpi ja neljä 108 mm:n neljännesympyrää niiden välillä. Resolvointi tarkistaa, että kaarten päät osuvat samoihin portteihin kuin suorat.",
+    "source": "woodenrailway.info Track Guide: X Star Switch, base D + E1†, length 216, radius 88 — \"four track directions at 90 degree angles, and curves to switch between them\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 216 }] },
+      {
+        "start": { "x": 108, "y": -108, "dir": 2 },
+        "from": { "id": "north", "connector": "socket", "branch": true },
+        "to": { "id": "south", "connector": "pin", "branch": true },
+        "path": [{ "straight": 216 }]
+      },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "south", "connector": "pin", "branch": true },
+        "path": [
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "right" } },
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "right" } }
+        ]
+      },
+      {
+        "from": { "id": "in", "connector": "socket" },
+        "to": { "id": "north", "connector": "socket", "branch": true },
+        "path": [
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "left" } },
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "left" } }
+        ]
+      },
+      {
+        "start": { "x": 108, "y": -108, "dir": 2 },
+        "from": { "id": "north", "connector": "socket", "branch": true },
+        "to": { "id": "out", "connector": "pin" },
+        "path": [
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "left" } },
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "left" } }
+        ]
+      },
+      {
+        "start": { "x": 108, "y": 108, "dir": 6 },
+        "from": { "id": "south", "connector": "pin", "branch": true },
+        "to": { "id": "out", "connector": "pin" },
+        "path": [
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "right" } },
+          { "curve": { "radiusMm": 108, "sweepDeg": 45, "hand": "right" } }
+        ]
+      }
+    ]
+  }
+]

@@ -57,9 +57,29 @@ describe('element library', () => {
   it('returns a hill to floor level after climbing', () => {
     const hill = elements.get('hill-d')
     expect(hill.levelDelta).toBe(0)
-    expect(hill.alongMm).toBeCloseTo(648, 6)
     expect(hill.acrossMm).toBeCloseTo(0, 6)
-    expect(hill.pieceCounts).toEqual({ N: 2, DECK216: 1 })
+    expect(hill.turnDeg).toBe(0)
+    // Ramppi ylös, kansi, sukupuolenvaihtaja, ramppi alas, sukupuolenvaihtaja.
+    expect(hill.pieceCounts).toEqual({ N: 2, DECK216: 1, C2: 1, B2: 1 })
+    expect(hill.alongMm).toBeCloseTo(216 + 216 + 54 + 216 + 54, 6)
+  })
+
+  it('drops a siding with a buffer stop without changing the main run', () => {
+    const siding = elements.get('siding-right')
+    expect(siding.role).toBe('siding')
+    expect(siding.turnDeg).toBe(0)
+    expect(siding.acrossMm).toBeCloseTo(0, 6)
+    // Vaihteen pääreitti on A:n mittainen, joten osuuden geometria säilyy.
+    expect(siding.alongMm).toBeCloseTo(144, 6)
+    expect(siding.pieceCounts).toEqual({ L: 1, A1: 1, R: 1 })
+  })
+
+  it('places the siding pieces off to the side of the main run', () => {
+    const ledger = new Ledger(unlimitedInventory())
+    const traversal = traverseElement(elements.get('siding-right').spec, library, ledger, startFrame(0, 0, 0), false)!
+    const bufferStop = traversal.placed.find((placed) => placed.pieceId === 'R')!
+    expect(bufferStop.placement.y).toBeGreaterThan(50)
+    expect(traversal.exit).toMatchObject({ dir: 0, level: 0, open: 'pin' })
   })
 
   it('gives interchangeable through elements the same signature', () => {
@@ -90,11 +110,27 @@ describe('element traversal', () => {
     expect(ledger.totalUsed()).toBe(0)
   })
 
-  it('needs the connector-flip setting for the descending ramp', () => {
-    const ledger = new Ledger(unlimitedInventory())
+  it('builds the hill with strictly correct connector genders', () => {
+    // Laskeva ramppi kääntää liittimen sukupuolen; C2 ja B2 ovat olemassa juuri
+    // tähän, joten mäki ei tarvitse "salli kääntö/adapterit" -asetusta.
     const strict = { ...elements.get('hill-d').spec, connectorPolicy: 'strict' as const }
-    expect(traverseElement(strict, library, ledger, startFrame(0, 0, 0), false)).toBeNull()
-    expect(traverseElement(elements.get('hill-d').spec, library, ledger, startFrame(0, 0, 0), false)).not.toBeNull()
+    const traversal = traverseElement(strict, library, new Ledger(unlimitedInventory()), startFrame(0, 0, 0), false)
+    expect(traversal).not.toBeNull()
+    expect(traversal!.exit.level).toBe(0)
+    expect(traversal!.exit.open).toBe('pin')
+  })
+
+  it('lifts the deck to level 1 and brings it back down', () => {
+    const traversal = traverseElement(
+      elements.get('hill-d').spec,
+      library,
+      new Ledger(unlimitedInventory()),
+      startFrame(0, 0, 0),
+      false,
+    )!
+    const levels = traversal.placed.map((placed) => placed.placement.level)
+    expect(Math.max(...levels)).toBe(1)
+    expect(traversal.placed.find((placed) => placed.pieceId === 'DECK216')!.placement.level).toBe(1)
   })
 
   it('skips an element that names a piece the library does not have', () => {

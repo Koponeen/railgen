@@ -48,8 +48,8 @@ export function scoreTrack(track: Track, skeleton: Skeleton, mask: CellMask, inv
 
   const shapeInterest = Math.min(1, Math.max(0, skeleton.corners.length - 4) / 8)
 
-  const hillCount = Object.keys(skeleton.hills).length
-  const features = Math.min(1, (hillCount + Math.max(0, track.maxLevel)) / 3)
+  const insertCount = Object.keys(skeleton.inserts).length
+  const features = Math.min(1, (insertCount + Math.max(0, track.maxLevel)) / 3)
 
   const tightness = Math.min(1, track.closure.tightnessPct / 100)
 

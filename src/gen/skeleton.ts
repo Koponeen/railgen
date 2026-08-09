@@ -33,8 +33,8 @@ export interface Skeleton {
   cornerPoints: Vec[]
   legDirs: Dir[]
   legLengthsMm: number[]
-  /** Mäkielementit osuuksittain: legIndex -> elementin tunnus. */
-  hills: Record<number, string>
+  /** Osuuteen upotetut elementit (mäki, sivuraide): legIndex -> elementin tunnus. */
+  inserts: Record<number, string>
   /** Osuuskohtainen täyttösiemen, jotta yksittäisen osuuden voi arpoa uudelleen. */
   fillSalts: number[]
   /** Sulkeutumisjäännös pyöristyksen jälkeen (mm, akseleittain). */
@@ -197,7 +197,7 @@ export function buildSkeleton(
     cornerPoints,
     legDirs,
     legLengthsMm,
-    hills: {},
+    inserts: {},
     fillSalts: Array.from({ length: count }, (_, i) => i + 1),
     residual: { x: 0, y: 0 },
   }
@@ -219,7 +219,7 @@ export function cloneSkeleton(skeleton: Skeleton): Skeleton {
     cornerPoints: skeleton.cornerPoints.map((point) => ({ ...point })),
     legDirs: [...skeleton.legDirs],
     legLengthsMm: [...skeleton.legLengthsMm],
-    hills: { ...skeleton.hills },
+    inserts: { ...skeleton.inserts },
     fillSalts: [...skeleton.fillSalts],
     residual: { ...skeleton.residual },
   }

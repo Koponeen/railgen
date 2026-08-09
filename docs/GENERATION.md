@@ -72,11 +72,18 @@ kelpaa. Mutaatio ei koskaan muuta saamaansa runkoa.
 | `shift-length` | Siirtää 18 mm osuudelta toiselle sulkeutumista rikkomatta. |
 | `refill-run` | Arpoo yhden osuuden täytön uudelleen samasta ekvivalenssiluokasta. |
 | `hill` | Ramppi ylös, kansi, ramppi alas suoralle osuudelle. |
-| `shortcut`, `extra-loop` | Vaativat vaihdepaloja — hylkäävät itsensä toistaiseksi. |
-| `overpass`, `x-crossing` | Vaativat risteyspaloja — hylkäävät itsensä toistaiseksi. |
+| `siding` | Sivuraide puskurilla: vaihde + pätkä + puskuri. |
+| `shortcut`, `extra-loop` | Uusi reitti takaisin silmukkaan — vaatii reititystä, ei vain palan vaihtoa. |
+| `overpass`, `x-crossing` | Toinen reitti silmukan yli tai läpi — sama tilanne. |
 
-Kaksi viimeistä riviä alkavat toimia, kun palat lisätään dataan
-(ks. `docs/PIECE_LIBRARY.md`); `mutate.ts`-tiedostoon ei tarvitse koskea.
+`hill` ja `siding` upotetaan suoralle osuudelle. Molempien **pääreitti on yhtä pitkä kuin
+korvaamansa suora**, joten silmukan geometria ei muutu lainkaan eikä sulkeutumista tarvitse
+laskea uudelleen: mäen ramppi–kansi–ramppi kulkee osuuden suuntaisesti, ja vaihteen suora
+sivu on tarkalleen A:n tai A1:n mittainen. Juuri tästä syystä README luvun 2 korvausluokat
+ovat olemassa.
+
+Kaksi viimeistä riviä odottavat reititysalgoritmia (README luku 5:n sovituskoneisto,
+toteutussuunnitelman vaihe 4). Palat niihin ovat jo kirjastossa.
 
 ## 5. Materialisointi ja validointi (`build.ts`)
 
@@ -96,15 +103,33 @@ limittäiset palat voivat törmätä — ylikulku on nimenomaan sallittu.
 
 ## Liittimen sukupuoli on suljetun silmukan invariantti
 
-Jokainen BRIO-pala on kolo → tappi. Suljetussa silmukassa jokainen liitos menee oikein
-päin **täsmälleen silloin**, kun yhtään palaa ei kuljeta väärinpäin: yksikin väärinpäin
-kuljettu pala rikkoo kaksi liitosta, eikä toinen väärinpäin kuljettu pala korjaa sitä.
+Tavallinen BRIO-pala on kolo → tappi. Suljetussa silmukassa jokainen liitos menee oikein
+päin **täsmälleen silloin**, kun yhtään tällaista palaa ei kuljeta väärinpäin: yksikin
+väärinpäin kuljettu pala rikkoo kaksi liitosta, eikä toinen väärinpäin kuljettu korjaa sitä.
 
-Mäki tarvitsee laskevan rampin, joka on nimenomaan väärinpäin kuljettu ramppi. Siksi
-mäki vaatii asetuksen **"salli kääntö/adapterit"** (README luku 2) — tai keskenään
-sukupuolitetun ramppiparin, jonka BRIO-koodeja ei ole voitu tarkistaa lähteestä.
-Oletuksena asetus on pois päältä, jolloin rata on tiukasti sukupuolioikea ja
-`hill`-mutaatio hylkää itsensä syyllä `requires-connector-flip`.
+Mäki tarvitsee laskevan rampin, joka on nimenomaan väärinpäin kuljettu ramppi. Ratkaisu ei
+ole asetus vaan pala: BRIO myy **sukupuolivariantteja** (B/C, B1/C1, B2/C2) juuri tähän.
+Mäki on siis
+
+```
+N ylös → kansi → C2 (kaksi koloa) → N alas → B2 (kaksi tappia)
+```
+
+C2 ottaa käännöksen vastaan kannen päässä ja B2 palauttaa parillisuuden alas tultaessa.
+Rata on koko matkan tiukasti sukupuolioikea, eikä "salli kääntö/adapterit" -asetusta tarvita.
+Lähde sanoo B2/C2:sta suoraan: *"arguably the single most useful track pieces because they
+can solve both gender alignment and track gap issues"*.
+
+Sukupuolivariantteja **ei käytetä yleisenä täytteenä** (`library.fillerStraights()` jättää ne
+pois) — muuten täyttö rikkoisi parillisuuden umpimähkään.
+
+## Naapuruus kirjataan, ei päätellä
+
+Sivuraiteen jälkeen palojen taulukkojärjestys ei enää vastaa ketjun järjestystä: haaran
+palat ovat vaihteen ja seuraavan pääraiteen palan välissä. Siksi materialisointi kirjaa
+liitokset erikseen (`Track.joints`), ja törmäystarkistus ohittaa nimenomaan ne parit.
+Sauma on mukana listassa, koska se ei sulkeudu täsmälleen eikä sitä voi päätellä porttien
+osumisesta.
 
 ## Pisteytys (`score.ts`)
 

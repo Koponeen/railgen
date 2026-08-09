@@ -62,15 +62,47 @@
   {
     "id": "hill-d",
     "role": "hill",
-    "steps": [{ "piece": "N" }, { "piece": "DECK216" }, { "piece": "N", "reverse": true }],
-    "connectorPolicy": "flexible",
-    "notes": "Mäki: ramppi ylös, kansi, ramppi alas. 648 mm. Laskeva ramppi kuljetaan yläpäästä sisään, joten liittimen sukupuoli vaatii käännön/adapterin — BRIO:n ramppien liitinsukupuolia ei ole voitu tarkistaa lähteestä (ks. docs/PIECE_LIBRARY.md)."
+    "steps": [
+      { "piece": "N" },
+      { "piece": "DECK216" },
+      { "piece": "C2" },
+      { "piece": "N", "reverse": true },
+      { "piece": "B2" }
+    ],
+    "notes": "Mäki: ramppi ylös, kansi, ramppi alas. 756 mm. Laskeva ramppi kuljetaan yläpäästä sisään, mikä kääntää liittimen sukupuolen; C2 (kaksi koloa) ottaa käännöksen vastaan kannen päässä ja B2 (kaksi tappia) palauttaa parillisuuden alas tultaessa. Juuri tähän nuo palat ovat olemassa."
   },
   {
     "id": "hill-a",
     "role": "hill",
-    "steps": [{ "piece": "N" }, { "piece": "DECK144" }, { "piece": "N", "reverse": true }],
-    "connectorPolicy": "flexible",
-    "notes": "Lyhyempi mäki, 576 mm."
+    "steps": [
+      { "piece": "N" },
+      { "piece": "DECK144" },
+      { "piece": "C2" },
+      { "piece": "N", "reverse": true },
+      { "piece": "B2" }
+    ],
+    "notes": "Lyhyempi mäki, 684 mm."
+  },
+  {
+    "id": "siding-right",
+    "role": "siding",
+    "steps": [{ "piece": "L", "branch": { "portId": "branch", "steps": [{ "piece": "A1" }, { "piece": "R" }] } }],
+    "notes": "Sivuraide puskurilla (README luku 6): vaihde + pätkä + puskuri. Vaihteen pääreitti on A:n mittainen, joten suoran osuuden geometria ei muutu lainkaan."
+  },
+  {
+    "id": "siding-left",
+    "role": "siding",
+    "steps": [{ "piece": "M", "branch": { "portId": "branch", "steps": [{ "piece": "A1" }, { "piece": "R" }] } }]
+  },
+  {
+    "id": "siding-right-short",
+    "role": "siding",
+    "steps": [{ "piece": "O1", "branch": { "portId": "branch", "steps": [{ "piece": "A2" }, { "piece": "R" }] } }],
+    "notes": "Ahtaan paikan sivuraide: O1:n pääreitti on A1:n mittainen."
+  },
+  {
+    "id": "siding-left-short",
+    "role": "siding",
+    "steps": [{ "piece": "P1", "branch": { "portId": "branch", "steps": [{ "piece": "A2" }, { "piece": "R" }] } }]
   }
 ]

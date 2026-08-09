@@ -14,11 +14,23 @@ describe('piece library', () => {
   })
 
   it('ships the straights and curves README chapter 2 pins down', () => {
-    const basicStraights = library.straights().filter((p) => !p.tags.includes('bridge-deck'))
-    expect(basicStraights.map((p) => p.id)).toEqual(['A2', 'A3', 'A1', 'A', 'D'])
-    expect(basicStraights.map((p) => p.straightLengthMm)).toEqual([54, 72, 108, 144, 216])
+    expect(library.fillerStraights().map((p) => p.id)).toEqual(['A2', 'A3', 'A1', 'A', 'D'])
+    expect(library.fillerStraights().map((p) => p.straightLengthMm)).toEqual([54, 72, 108, 144, 216])
+    // Kaaren keskilinjasäde on sisäsäde + puoli laudanleveyttä (182 + 20, 90 + 20).
     expect(library.get('E').lengthMm).toBeCloseTo((202 * Math.PI) / 4, 6)
     expect(library.get('E1').lengthMm).toBeCloseTo((110 * Math.PI) / 4, 6)
+  })
+
+  it('keeps gender changers and bridge decks out of the gap filler', () => {
+    const fillerIds = library.fillerStraights().map((p) => p.id)
+    // B/C-sarja on olemassa liitinsukupuolen kääntämiseen; yleisenä täytteenä
+    // se rikkoisi silmukan liitinparillisuuden.
+    expect(fillerIds).not.toContain('B2')
+    expect(fillerIds).not.toContain('C2')
+    expect(fillerIds).not.toContain('DECK216')
+    expect(library.byTag('gender-changer').map((p) => p.id)).toEqual(
+      expect.arrayContaining(['B', 'C', 'B1', 'C1', 'B2', 'C2', 'N1']),
+    )
   })
 
   it('keeps every straight exactly on the 18 mm micro grid', () => {
@@ -38,11 +50,29 @@ describe('piece library', () => {
     }
   })
 
-  it('gives every piece exactly two main ports and complementary connectors', () => {
+  it('gives every through piece a two-port main span, and terminals a single port', () => {
     for (const piece of library.pieces) {
-      expect(piece.mainPorts, piece.id).toHaveLength(2)
-      expect(piece.mainPorts[0].connector).not.toBe(piece.mainPorts[1].connector)
+      expect(piece.mainPorts, piece.id).toHaveLength(piece.isTerminal ? 1 : 2)
     }
+  })
+
+  it('gives ordinary pieces complementary connectors, and gender changers matching ones', () => {
+    for (const piece of library.pieces) {
+      if (piece.isTerminal) continue
+      const [a, b] = piece.mainPorts
+      if (piece.tags.includes('symmetric-connectors')) {
+        expect(a.connector, piece.id).toBe(b.connector)
+      } else {
+        expect(a.connector, piece.id).not.toBe(b.connector)
+      }
+    }
+  })
+
+  it('reproduces the substitution classes README chapter 2 lists', () => {
+    // Näitä ei ole kerrottu koodille missään: ne putoavat ulos porttisignatuurista.
+    expect(library.substitutesFor('D').map((p) => p.id).sort()).toEqual(['DECK216', 'N', 'T', 'X'])
+    expect(library.substitutesFor('A').map((p) => p.id).sort()).toEqual(['DECK144', 'H2', 'L', 'M'])
+    expect(library.substitutesFor('A1').map((p) => p.id).sort()).toEqual(['H', 'O1', 'P1'])
   })
 })
 

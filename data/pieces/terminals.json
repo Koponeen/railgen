@@ -1,0 +1,38 @@
+[
+  {
+    "id": "R",
+    "kind": "terminal",
+    "lengthMm": 40,
+    "connector": "socket",
+    "tags": ["buffer"],
+    "notes": "R ja S ovat pari, joista toisessa on urosliitin ja toisessa naarasliitin; kumpi kirjain on kumpi, ei ole varmistettu. 40 mm ei ole 18 mm:n gridissä — umpipäätä ei koskaan käytetä välin täyttöön.",
+    "source": "woodenrailway.info Track Guide: R/S Buffer Stops, length 40"
+  },
+  {
+    "id": "S",
+    "kind": "terminal",
+    "lengthMm": 40,
+    "connector": "pin",
+    "tags": ["buffer"],
+    "notes": "R:n pari.",
+    "source": "woodenrailway.info Track Guide: R/S Buffer Stops, length 40"
+  },
+  {
+    "id": "U",
+    "kind": "terminal",
+    "lengthMm": 54,
+    "connector": "socket",
+    "tags": ["vehicle-ramp"],
+    "notes": "Ajoramppi, jota pitkin autot pääsevät radalle ja pois. U ja V ovat pari; kumpi kirjain on kumpaa sukupuolta, ei ole varmistettu.",
+    "source": "woodenrailway.info Track Guide: U/V Ramp Tracks, base D, length 54"
+  },
+  {
+    "id": "V",
+    "kind": "terminal",
+    "lengthMm": 54,
+    "connector": "pin",
+    "tags": ["vehicle-ramp"],
+    "notes": "U:n pari.",
+    "source": "woodenrailway.info Track Guide: U/V Ramp Tracks, base D, length 54"
+  }
+]

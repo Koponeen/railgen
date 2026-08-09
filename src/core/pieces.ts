@@ -18,7 +18,7 @@ import { mirrorVec, rotateVec, transformPoint, type Placement, type Vec } from '
 // (parametrinen / yhdistelmä / erikois, README luku 8), mutta yksittäinen uusi
 // pala ei koskaan vaadi kooditiedoston muutosta.
 
-export type PieceKind = 'straight' | 'curve' | 'ramp' | 'composite' | 'custom'
+export type PieceKind = 'straight' | 'curve' | 'ramp' | 'terminal' | 'junction' | 'composite' | 'custom'
 
 interface PieceCommonSpec {
   id: string
@@ -37,6 +37,12 @@ interface PieceCommonSpec {
 export interface StraightSpec extends PieceCommonSpec {
   kind: 'straight'
   lengthMm: number
+  /**
+   * Liittimet [sisääntulo, ulostulo]. Oletus kolo -> tappi. BRIO myy myös
+   * sukupuolivariantteja (B/C, B1/C1, B2/C2), joilla molemmat päät ovat samat;
+   * ne ovat ainoa tapa kääntää silmukan liitinparillisuus.
+   */
+  connectors?: [Connector, Connector]
 }
 
 export interface CurveSpec extends PieceCommonSpec {
@@ -52,6 +58,43 @@ export interface RampSpec extends PieceCommonSpec {
   kind: 'ramp'
   lengthMm: number
   riseMm: number
+  connectors?: [Connector, Connector]
+}
+
+/** Umpipää: puskuri tai ajoramppi. Vain yksi portti. */
+export interface TerminalSpec extends PieceCommonSpec {
+  kind: 'terminal'
+  lengthMm: number
+  connector: Connector
+}
+
+/** Reitin askel: suora tai kaari. Kaikki kaaret ovat 45°:n monikertoja. */
+export type PathStep = { straight: number } | { curve: { radiusMm: number; sweepDeg: number; hand: 'left' | 'right' } }
+
+export interface RoutePortSpec {
+  id: string
+  connector: Connector
+  branch?: boolean
+  levelOffset?: number
+}
+
+export interface RouteSpec {
+  /** Reitin alkuasento palan koordinaatistossa. Oletus origo suuntaan 0. */
+  start?: { x?: number; y?: number; dir?: number }
+  from: RoutePortSpec
+  to: RoutePortSpec
+  path: PathStep[]
+}
+
+/**
+ * Vaihde tai risteys: joukko reittejä, joista portit johdetaan automaattisesti.
+ * Reitit saavat jakaa portteja (vaihteen haarat lähtevät samasta sisääntulosta),
+ * jolloin resolvointi tarkistaa että jaetun portin sijainti täsmää — käsin
+ * lasketut koordinaatit eivät siis pääse ristiriitaan keskenään.
+ */
+export interface JunctionSpec extends PieceCommonSpec {
+  kind: 'junction'
+  routes: RouteSpec[]
 }
 
 export interface CompositePartSpec {
@@ -93,7 +136,7 @@ export interface CustomSpec extends PieceCommonSpec {
   lengthMm?: number
 }
 
-export type PieceSpec = StraightSpec | CurveSpec | RampSpec | CompositeSpec | CustomSpec
+export type PieceSpec = StraightSpec | CurveSpec | RampSpec | TerminalSpec | JunctionSpec | CompositeSpec | CustomSpec
 
 export interface ResolvedPiece {
   id: string
@@ -102,8 +145,12 @@ export interface ResolvedPiece {
   /** Ei-haaraportit. Korvausluokka lasketaan näistä (R8 / README luku 2). */
   mainPorts: Port[]
   segments: Segment[]
-  /** Keskilinjan pituus millimetreinä. */
+  /** Pääreitin keskilinjan pituus millimetreinä (radan pituus lasketaan tästä). */
   lengthMm: number
+  /** Kaikkien reittien yhteispituus; vaihteella suurempi kuin `lengthMm`. */
+  totalLengthMm: number
+  /** Umpipää: vain yksi portti, ketju päättyy tähän. */
+  isTerminal: boolean
   /** Suoran nimellispituus, jos pala on suora tai ramppi; muuten null. */
   straightLengthMm: number | null
   footprint: Vec[][]
@@ -124,6 +171,8 @@ const DEFAULT_VARIO_FACTOR: Record<PieceKind, number> = {
   straight: 1,
   curve: 1.5,
   ramp: 1,
+  terminal: 1,
+  junction: 1,
   composite: 1,
   custom: 1,
 }
@@ -178,7 +227,102 @@ function curveGeometry(spec: CurveSpec): { ports: Port[]; segments: Segment[] } 
   }
 }
 
-// --- Taso 2: yhdistelmäpalat -------------------------------------------------
+function straightPorts(lengthMm: number, riseLevels: number, connectors: [Connector, Connector]): Port[] {
+  return [
+    makePort({ id: 'in', x: 0, y: 0, dir: 4, connector: connectors[0] }),
+    makePort({ id: 'out', x: lengthMm, y: 0, dir: 0, connector: connectors[1], levelOffset: riseLevels }),
+  ]
+}
+
+// --- Taso 2: vaihteet ja risteykset reitteinä --------------------------------
+
+/** Kulkee yhden reitin läpi ja palauttaa segmentit sekä loppuasennon. */
+function walkRoute(pieceId: string, route: RouteSpec): { segments: Segment[]; start: Vec; startDir: Dir; end: Vec; endDir: Dir } {
+  const start: Vec = { x: route.start?.x ?? 0, y: route.start?.y ?? 0 }
+  const startDirRaw = route.start?.dir ?? 0
+  if (!isDir(startDirRaw)) throw new RangeError(`piece "${pieceId}": route start direction ${startDirRaw} is not a 45° slot`)
+
+  let position = start
+  let heading: Dir = startDirRaw
+  const segments: Segment[] = []
+
+  for (const step of route.path) {
+    const placement: Placement = { x: position.x, y: position.y, rot: heading, mirror: false, level: 0 }
+    if ('straight' in step) {
+      const local: Segment = { type: 'line', from: { x: 0, y: 0 }, to: { x: step.straight, y: 0 } }
+      const segment = transformSegment(local, placement)
+      segments.push(segment)
+      position = segmentEnd(segment)
+    } else {
+      const { radiusMm, sweepDeg, hand } = step.curve
+      const slots = sweepDeg / 45
+      if (!Number.isInteger(slots)) throw new RangeError(`piece "${pieceId}": curve sweep ${sweepDeg}° is not a multiple of 45°`)
+      const sign = hand === 'right' ? 1 : -1
+      const local: Segment = {
+        type: 'arc',
+        center: { x: 0, y: sign * radiusMm },
+        radiusMm,
+        startDeg: sign * -90,
+        sweepDeg: sign * sweepDeg,
+      }
+      const segment = transformSegment(local, placement)
+      segments.push(segment)
+      position = segmentEnd(segment)
+      heading = normalizeDir(heading + sign * slots)
+    }
+  }
+
+  return { segments, start, startDir: startDirRaw, end: position, endDir: heading }
+}
+
+function resolveJunction(spec: JunctionSpec): { ports: Port[]; segments: Segment[]; routeLengths: Map<string, number> } {
+  const ports = new Map<string, Port>()
+  const segments: Segment[] = []
+  const routeLengths = new Map<string, number>()
+
+  const define = (portSpec: RoutePortSpec, at: Vec, dir: Dir): void => {
+    const port = makePort({
+      id: portSpec.id,
+      x: at.x,
+      y: at.y,
+      dir,
+      connector: portSpec.connector,
+      levelOffset: portSpec.levelOffset ?? 0,
+      branch: portSpec.branch ?? false,
+    })
+    const existing = ports.get(portSpec.id)
+    if (!existing) {
+      ports.set(portSpec.id, port)
+      return
+    }
+    // Jaettu portti: reittien on päädyttävä samaan paikkaan samalla liittimellä,
+    // muuten data on ristiriitainen itsensä kanssa.
+    if (Math.abs(existing.x - port.x) > EPS_MM || Math.abs(existing.y - port.y) > EPS_MM || existing.dir !== port.dir) {
+      throw new RangeError(
+        `piece "${spec.id}": port "${portSpec.id}" is reached at (${port.x.toFixed(2)}, ${port.y.toFixed(2)}) dir ${port.dir}` +
+          ` but was already defined at (${existing.x.toFixed(2)}, ${existing.y.toFixed(2)}) dir ${existing.dir}`,
+      )
+    }
+    if (existing.connector !== port.connector) {
+      throw new RangeError(`piece "${spec.id}": port "${portSpec.id}" is declared as both "${existing.connector}" and "${port.connector}"`)
+    }
+    if (existing.branch !== port.branch) {
+      throw new RangeError(`piece "${spec.id}": port "${portSpec.id}" is declared both as a branch and as a main port`)
+    }
+  }
+
+  for (const route of spec.routes) {
+    const walked = walkRoute(spec.id, route)
+    segments.push(...walked.segments)
+    define(route.from, walked.start, oppositeDir(walked.startDir))
+    define(route.to, walked.end, walked.endDir)
+    routeLengths.set(`${route.from.id}->${route.to.id}`, pathLength(walked.segments))
+  }
+
+  return { ports: [...ports.values()], segments, routeLengths }
+}
+
+// --- Taso 3: yhdistelmäpalat -------------------------------------------------
 
 /** Sijoitus, jolla palan `entry`-portti liittyy jo koottuun `target`-porttiin. */
 export function placementForMate(entry: Port, target: Port, mirror: boolean, level = 0): Placement {
@@ -241,11 +385,12 @@ export function resolvePiece(spec: PieceSpec, library: Map<string, ResolvedPiece
   let explicitLength: number | null = null
   let explicitPath: string | null = null
 
+  let routeLengths: Map<string, number> | null = null
+
   switch (spec.kind) {
     case 'straight': {
-      const geometry = straightGeometry(spec.lengthMm, 0)
-      ports = geometry.ports
-      segments = geometry.segments
+      ports = straightPorts(spec.lengthMm, 0, spec.connectors ?? ['socket', 'pin'])
+      segments = straightGeometry(spec.lengthMm, 0).segments
       break
     }
     case 'ramp': {
@@ -253,9 +398,20 @@ export function resolvePiece(spec: PieceSpec, library: Map<string, ResolvedPiece
       if (Math.abs(levels - Math.round(levels)) > 1e-9) {
         throw new RangeError(`ramp "${spec.id}": rise ${spec.riseMm} mm is not a multiple of ${LEVEL_RISE_MM} mm`)
       }
-      const geometry = straightGeometry(spec.lengthMm, Math.round(levels))
+      ports = straightPorts(spec.lengthMm, Math.round(levels), spec.connectors ?? ['socket', 'pin'])
+      segments = straightGeometry(spec.lengthMm, 0).segments
+      break
+    }
+    case 'terminal': {
+      ports = [makePort({ id: 'in', x: 0, y: 0, dir: 4, connector: spec.connector })]
+      segments = straightGeometry(spec.lengthMm, 0).segments
+      break
+    }
+    case 'junction': {
+      const geometry = resolveJunction(spec)
       ports = geometry.ports
       segments = geometry.segments
+      routeLengths = geometry.routeLengths
       break
     }
     case 'curve': {
@@ -281,11 +437,21 @@ export function resolvePiece(spec: PieceSpec, library: Map<string, ResolvedPiece
   }
 
   const mainPorts = ports.filter((port) => !port.branch)
-  const mirrorable = spec.mirrorable ?? (spec.kind === 'straight' || spec.kind === 'curve' || spec.kind === 'ramp')
+  const isTerminal = spec.kind === 'terminal'
+  const mirrorable =
+    spec.mirrorable ?? (spec.kind === 'straight' || spec.kind === 'curve' || spec.kind === 'ramp' || spec.kind === 'terminal')
   const resolvedFootprint = footprint ?? (segments.length > 0 ? [footprintPolygon(segments)] : [])
   const bbox = resolvedFootprint.length > 0 ? unionBBox(resolvedFootprint.map(polygonBBox)) : { minX: 0, minY: 0, maxX: 0, maxY: 0 }
-  const straightLengthMm =
-    spec.kind === 'straight' || spec.kind === 'ramp' ? spec.lengthMm : null
+  // Umpipäätä ei koskaan käytetä välin täyttöön, joten sitä ei mitata suorana
+  // (esim. puskuri on 40 mm eikä osu mikrogridiin).
+  const straightLengthMm = spec.kind === 'straight' || spec.kind === 'ramp' ? spec.lengthMm : null
+
+  // Vaihteen pituus radalla on sen pääreitin pituus, ei kaikkien reittien summa.
+  const totalLengthMm = explicitLength ?? pathLength(segments)
+  const mainRouteLength =
+    routeLengths && mainPorts.length === 2
+      ? routeLengths.get(`${mainPorts[0].id}->${mainPorts[1].id}`) ?? routeLengths.get(`${mainPorts[1].id}->${mainPorts[0].id}`)
+      : undefined
 
   return {
     id: spec.id,
@@ -293,12 +459,15 @@ export function resolvePiece(spec: PieceSpec, library: Map<string, ResolvedPiece
     ports,
     mainPorts,
     segments,
-    lengthMm: explicitLength ?? pathLength(segments),
+    lengthMm: mainRouteLength ?? totalLengthMm,
+    totalLengthMm,
+    isTerminal,
     straightLengthMm,
     footprint: resolvedFootprint,
     bbox,
     levelDelta: Math.max(0, ...ports.map((p) => p.levelOffset)) - Math.min(0, ...ports.map((p) => p.levelOffset)),
     varioFactor: spec.varioFactor ?? DEFAULT_VARIO_FACTOR[spec.kind],
+
     mirrorable,
     minLevel: spec.minLevel ?? 0,
     tags: spec.tags ?? [],
@@ -321,8 +490,12 @@ export function validatePiece(piece: ResolvedPiece): PieceProblem[] {
   const problems: PieceProblem[] = []
   const push = (code: string, detail: string) => problems.push({ pieceId: piece.id, code, detail })
 
-  if (piece.ports.length < 2) push('too-few-ports', `${piece.ports.length} port(s)`)
-  if (piece.mainPorts.length !== 2) push('main-span', `${piece.mainPorts.length} non-branch ports, expected 2`)
+  // Umpipäällä (puskuri, ajoramppi) on tarkoituksella vain yksi portti.
+  const expectedMainPorts = piece.isTerminal ? 1 : 2
+  if (piece.ports.length < expectedMainPorts) push('too-few-ports', `${piece.ports.length} port(s)`)
+  if (piece.mainPorts.length !== expectedMainPorts) {
+    push('main-span', `${piece.mainPorts.length} non-branch ports, expected ${expectedMainPorts}`)
+  }
 
   const ids = new Set<string>()
   for (const port of piece.ports) {
@@ -405,6 +578,21 @@ export function placeAtFrame(
     placed: { pieceId: piece.id, placement, entryPortId: entry.id, exitPortId: exit.id },
     exit: { x: worldExit.x, y: worldExit.y, dir: worldExit.dir, level: worldExit.levelOffset, open: exit.connector },
   }
+}
+
+/**
+ * Sijoittaa umpipään (puskuri tai ajoramppi) kohdistimeen. Ketju päättyy tähän,
+ * joten uutta kohdistinta ei synny.
+ */
+export function placeTerminal(piece: ResolvedPiece, frame: Frame, options: PlaceOptions = {}): PlacedPiece | null {
+  const entry = piece.ports.find((port) => port.id === (options.entryPortId ?? piece.mainPorts[0]?.id))
+  if (!entry) return null
+  if (!options.allowConnectorFlip && entry.connector !== complementOf(frame.open)) return null
+
+  const target: Port = { id: 'cursor', x: frame.x, y: frame.y, dir: frame.dir, connector: frame.open, levelOffset: 0, branch: false }
+  const placement = placementForMate(entry, target, options.mirror ?? false, frame.level - entry.levelOffset)
+  if (placement.level < piece.minLevel) return null
+  return { pieceId: piece.id, placement, entryPortId: entry.id, exitPortId: entry.id }
 }
 
 export function placedSegments(placed: PlacedPiece, piece: ResolvedPiece): Segment[] {

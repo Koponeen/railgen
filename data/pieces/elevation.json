@@ -8,6 +8,16 @@
     "source": "README luku 2: tasoero 64 mm / 216 mm matkalla; N kuuluu 216 mm:n korvausluokkaan"
   },
   {
+    "id": "N1",
+    "kind": "ramp",
+    "lengthMm": 216,
+    "riseMm": 64,
+    "connectors": ["pin", "pin"],
+    "tags": ["ramp", "gender-changer", "symmetric-connectors"],
+    "notes": "Nousee kuten N mutta molemmat liittimet urospuolisia; toimitettiin Reversible Bridgen (#33397) kanssa, jonka molemmissa päissä on naarasliittimet.",
+    "source": "woodenrailway.info Track Guide: N1 = N kahdella urospuolisella liittimellä"
+  },
+  {
     "id": "DECK144",
     "kind": "straight",
     "lengthMm": 144,

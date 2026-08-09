@@ -61,7 +61,7 @@ function compareCombos(a: readonly number[], b: readonly number[]): number {
 
 export function fillTableFor(library: PieceLibrary, maxUnits?: number): FillTable {
   return buildFillTable(
-    library.straights().map((piece) => piece.straightLengthMm as number),
+    library.fillerStraights().map((piece) => piece.straightLengthMm as number),
     maxUnits,
   )
 }
@@ -136,8 +136,7 @@ export function solveFill(
   }
 
   const candidates = library
-    .straights()
-    .filter((piece) => !piece.tags.includes('bridge-deck'))
+    .fillerStraights()
     .map((piece) => ({ piece, units: toMicroUnits(piece.straightLengthMm as number) }))
 
   const budget = { nodes: request.maxNodes ?? 4000 }

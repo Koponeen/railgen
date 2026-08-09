@@ -1,0 +1,50 @@
+[
+  {
+    "id": "H",
+    "kind": "junction",
+    "tags": ["crossing"],
+    "notes": "Kaksi A1:n mittaista suoraa ristissä 90 asteessa. Lähteen mukaan H toimitetaan kahtena kappaleena, jotta liitinsukupuolten suunnan voi kääntää; layoutin kannalta se on yksi risteys.",
+    "source": "woodenrailway.info Track Guide: H Cross, base A1, length 108 — \"each part is an A1 length\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 108 }] },
+      {
+        "start": { "x": 54, "y": -54, "dir": 2 },
+        "from": { "id": "north", "connector": "socket", "branch": true },
+        "to": { "id": "south", "connector": "pin", "branch": true },
+        "path": [{ "straight": 108 }]
+      }
+    ]
+  },
+  {
+    "id": "H1",
+    "kind": "junction",
+    "tags": ["crossing", "gender-changer", "symmetric-connectors"],
+    "notes": "116 mm:n suorat ristissä; vastakkaisissa päissä on sama liitin (uros–uros ja naaras–naaras). Kumpi akseli on kumpaa sukupuolta on kiertosymmetrian vuoksi sama pala. 116 mm ei ole 18 mm:n gridissä — pala on suunniteltu kaarrevaihteiden väliin, ei suoralle osuudelle.",
+    "source": "woodenrailway.info Track Guide: H1 Cross, length 116 — \"the opposite ends have the same connector (male-to-male, and female-to-female)\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "pin" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 116 }] },
+      {
+        "start": { "x": 58, "y": -58, "dir": 2 },
+        "from": { "id": "north", "connector": "socket", "branch": true },
+        "to": { "id": "south", "connector": "socket", "branch": true },
+        "path": [{ "straight": 116 }]
+      }
+    ]
+  },
+  {
+    "id": "H2",
+    "kind": "junction",
+    "tags": ["crossing", "diagonal"],
+    "notes": "Kaksi A:n mittaista suoraa ristissä 45 asteessa, leikkauspiste kummankin keskellä. Lähde huomauttaa, että pala nojaa lähes kokonaan Vario-joustoon: 45 asteen risteystä ei saa täsmälleen sopimaan vaihteilla yhdistettyjen rinnakkaisraiteiden väliin.",
+    "source": "woodenrailway.info Track Guide: H2 Criss Cross, base A, length 144 — \"two A track crossing at a 45 degree angle\"",
+    "routes": [
+      { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 144 }] },
+      {
+        "start": { "x": 21.0883, "y": -50.9117, "dir": 1 },
+        "from": { "id": "diagIn", "connector": "socket", "branch": true },
+        "to": { "id": "diagOut", "connector": "pin", "branch": true },
+        "path": [{ "straight": 144 }]
+      }
+    ]
+  }
+]

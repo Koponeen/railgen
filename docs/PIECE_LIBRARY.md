@@ -19,24 +19,43 @@ rivi dataan — kooditiedostoihin ei kosketa.
 
 | Taso | `kind` | Mitä data sisältää |
 |---|---|---|
-| 1 | `straight`, `curve`, `ramp` | Pelkät parametrit. Portit, keskilinja, jalanjälki ja piirtopolku johdetaan automaattisesti. |
-| 2 | `composite` | Lista primitiivejä ja liitoskohdat. Esim. kaarrevaihde "L = A + E". |
+| 1 | `straight`, `curve`, `ramp`, `terminal` | Pelkät parametrit. Portit, keskilinja, jalanjälki ja piirtopolku johdetaan automaattisesti. |
+| 2 | `junction`, `composite` | Vaihteet ja risteykset reitteinä; yhdistelmäpalat listana primitiivejä. |
 | 3 | `custom` | Portit käsin, oma piirtopolku **SVG-polkudatana JSON-kentässä** (R3) — ei koodia. |
 
 Yhteiset kentät: `varioFactor` (R5), `mirrorable`, `tags`, `minLevel`, `source`, `notes`.
 
-### Esimerkki: taso 2
+Suoralla ja rampilla voi antaa `connectors: [sisääntulo, ulostulo]`; oletus on kolo → tappi.
+Sukupuolivariantit (B/C, B1/C1, B2/C2, N1) ovat tämän kentän ainoa käyttötarkoitus.
+
+### Taso 2: vaihde tai risteys reitteinä
+
+Vaihde kuvataan **reitteinä**, ei porttikoordinaatteina: jokainen reitti on ketju suoria ja
+kaaria, ja portit johdetaan reittien päistä. Käsin ei siis lasketa yhtään koordinaattia.
 
 ```jsonc
 {
   "id": "L",
-  "kind": "composite",
-  "parts": [
-    { "piece": "A", "rename": { "in": "in", "out": "mid" } },
-    { "piece": "E", "join": { "toPort": "mid" }, "rename": { "out": "branch" }, "branchPorts": ["out"] }
+  "kind": "junction",
+  "mirrorable": false,
+  "routes": [
+    { "from": { "id": "in", "connector": "socket" },
+      "to":   { "id": "out", "connector": "pin" },
+      "path": [{ "straight": 144 }] },
+    { "from": { "id": "in", "connector": "socket" },
+      "to":   { "id": "branch", "connector": "pin", "branch": true },
+      "path": [{ "curve": { "radiusMm": 202, "sweepDeg": 45, "hand": "right" } }] }
   ]
 }
 ```
+
+Reitit saavat jakaa portteja. Kun ne jakavat, resolvointi **tarkistaa** että kumpikin reitti
+päätyy samaan pisteeseen samaan suuntaan samalla liittimellä. Tähtiristeys `X` on paras
+esimerkki: kaksi suoraa ja neljä neljännesympyrää, ja jos jokin kaari ei osuisi samoihin
+portteihin kuin suorat, data ei resolvoituisi lainkaan.
+
+Vaihteita ei voi kääntää nurin (kielet ovat päällä), joten niillä on `mirrorable: false` ja
+kummallekin puolelle oma palansa — juuri siksi BRIO myy L ja M parina.
 
 ## Korvausluokat
 
@@ -66,50 +85,56 @@ ei ole. Omistajan custom-pala toimii siis heti ilman käännöstyötä.
 
 ## Mukana oleva palasto
 
-Kaikki alla olevat mitat tulevat README luvusta 2.
+Lähde: woodenrailway.info **BRIO Track Guide** ja README luku 2. Kaaren keskilinjasäde on
+lähteen sisäsäde + puoli laudanleveyttä (182 + 20 = 202, 90 + 20 = 110); lähde vahvistaa
+tämän ilmoittamalla E:n ulkosäteeksi 222 mm.
 
 | Tunnus | Tyyppi | Mitat |
 |---|---|---|
 | `A2`, `A3`, `A1`, `A`, `D` | suora | 54, 72, 108, 144, 216 mm |
+| `B`/`C`, `B1`/`C1`, `B2`/`C2` | suora, sukupuolivariantti | 144, 108, 54 mm; kaksi tappia / kaksi koloa |
 | `E` | kaari 45° | keskilinjasäde 202 mm (sisäsäde 182 mm) |
 | `E1` | kaari 45° | keskilinjasäde 110 mm (sisäsäde 90 mm) |
 | `N` | ramppi | 216 mm, nousu 64 mm |
+| `N1` | ramppi, kaksi tappia | 216 mm, nousu 64 mm |
 | `DECK144/216/324/360` | sillan kansi | 144, 216, 324, 360 mm, `minLevel: 1` |
+| `L`, `M` | kaarrevaihde | pääreitti 144 mm, haara E-kaari |
+| `O1`, `P1` | lyhyt kaarrevaihde | pääreitti 108 mm, haara E1-kaari |
+| `T` | T-risteys | pääreitti 216 mm, haara 90° säteellä 108 mm |
+| `X` | tähtiristeys | 216 × 216 mm, neljä porttia, neljä 108 mm:n neljännesympyrää |
+| `H`, `H1`, `H2` | risteys | 2 × 108 mm suorassa kulmassa, 2 × 116 mm suorassa kulmassa, 2 × 144 mm 45 asteessa |
+| `R`, `S` | puskuri | 40 mm, yksi portti |
+| `U`, `V` | ajoramppi | 54 mm, yksi portti |
 
-`DECK*`-tunnukset ovat kuvailevia: README antaa kansien pituudet muttei BRIO:n kirjainkoodeja.
+`DECK*`-tunnukset ovat kuvailevia: lähde antaa kansien pituudet muttei BRIO:n kirjainkoodeja.
 
-## Odottavat palat — mitat tarkistamatta
+### Mitä lähteestä on johdettu, ei luettu suoraan
 
-Näitä **ei ole** lisätty kirjastoon, koska README ei anna niiden geometriaa eikä
-woodenrailway.info ole ollut saatavilla mittojen tarkistamiseen. Työskentelykäytäntö on
-selvä: *jos mitat epäilyttävät, tarkista lähteestä äläkä arvaa* (CLAUDE.md). Kukin näistä on
-yhden datarivin työ, kun mitat on tarkistettu — koodimuutoksia ei tarvita.
+- **`T` ja `X` haarasäde 108 mm.** Lähde antaa sisäsäteen 88 mm ja huomauttaa, että säde on
+  "2 mm E1:tä tiukempi, koska suora sivu on D". 88 + 20 = 108 = 216/2, eli neljännesympyrä
+  vie täsmälleen puolet D:n pituudesta — sama luku kahdesta suunnasta.
+- **`L`/`M` ja `O1`/`P1` puolisuus.** Lähde kertoo, että ne ovat pari, muttei kumpi kirjain
+  on kumpi puoli. Geometria on molemmille oikein; vain nimilappu voi olla väärinpäin.
+- **`R`/`S` ja `U`/`V` liitinsukupuoli.** Sama tilanne: pari on varma, kirjain–sukupuoli ei.
+- **Vaihteiden haaraportin liitinsukupuoli.** Mallinnettu tapiksi kuten pääreitin ulostulo.
+  Lähde ei kerro tätä.
 
-| Pala | Mitä pitää tarkistaa |
+## Odottavat palat
+
+Näitä ei ole kirjastossa. Työskentelykäytäntö on selvä: *jos mitat epäilyttävät, tarkista
+lähteestä äläkä arvaa* (CLAUDE.md). Kukin on yhden datarivin työ, kun tiedot löytyvät.
+
+| Pala | Mikä puuttuu |
 |---|---|
-| `T` (T-risteys) | haaraportin sijainti ja suunta 216 mm:n läpikulun varrella |
-| `X` (X-tähtiristeys) | haarojen lukumäärä, kulmat ja porttien sijainnit |
-| `K` | geometria (216 mm:n luokka) |
-| `L`, `M` (kaarrevaihteet) | mihin porttiin E-kaari kiinnittyy ja kummalle puolelle; README antaa vain "L = A + E" |
-| `I`, `J`, `F1`, `G1`, `H2`, `Q` | 144 mm:n luokan vaihteiden haaraportit |
-| `O1`, `P1`, `H` (risti) | 108 mm:n luokka |
-| `H3` (kaariristeys) | E-luokka, README sanoo "= 2×E" |
-| `O`, `P` | E1-luokka, README sanoo "= 2×E1" |
-| Taipuva pala | pituushaarukka ja maksimitaivutus omistajan 3D-tulosteesta (parametrit ovat dataa, ks. `FlexSettings`) |
-| IKEA Lillabo -osat | mitat |
-| `N`-rampin liitinsukupuolet | onko ramppeja olemassa sukupuolitettuna parina (nouseva/laskeva)? Ks. alla. |
-
-### Rampin liitinsukupuoli
-
-`N` on mallinnettu tavalliseksi kolo → tappi -palaksi, joka nousee yhden tason. Laskeva
-ramppi on sama pala kuljettuna yläpäästä sisään, mikä kääntää liittimen sukupuolen.
-Suljetussa silmukassa se rikkoo kaksi liitosta (ks. `docs/GENERATION.md`), joten mäki
-vaatii asetuksen "salli kääntö/adapterit".
-
-Jos BRIO:lla on erillinen laskeva ramppi omalla liitinjärjestyksellään, se on yksi
-datarivi (`kind: "ramp"`, `riseMm: -64`) ja mäki toimii ilman asetusta.
-
-`DECK*`-kansien liitinsukupuolet ovat samasta syystä oletuksia, eivät tarkistettuja.
+| `I`, `J` (kolmisuuntainen kaarrevaihde) | Geometria on selvä (A + kaksi E-kaarta samasta päästä), mutta lähde ei kerro, **miten I ja J eroavat toisistaan** — molemmilla on sekä vasen että oikea haara, joten ero ei voi olla puolisuus. |
+| `O`, `P` (kaksihaarainen E1-vaihde) | Sama tilanne: kaksi E1-kaarta samasta päästä, ero I/J:n tapaan tuntematon. |
+| `F`, `G` (vaihde 150 mm) | Rinnakkaisraiteiden sivusiirtymää ei kerrota. |
+| `F1`, `G1`, `F2`, `G2` (rinnakkaisvaihteet) | Haaraporttien sijainnit; kaksoisraiteen 46 mm:n väli tiedetään, muttei haaran kiinnityskohtaa. |
+| `H3` (kaariristeys) | Kahden E-kaaren keskinäistä risteämiskulmaa ei kerrota. |
+| `Q` (viisipistevaihde) | **Sisäkäännökset ovat 22,5°**, mikä ei osu 45°:n porttilokeroihin. Vaatisi porttimallin laajennuksen, ei pelkkää dataa. |
+| `EE`, `EE1`, `K`, `K1` (kaksoisraidepalat) | Geometria on johdettavissa (46 mm väli), mutta palamalli olettaa yhden pääreitin. Kaksoisraidepala tarvitsisi käsitteen "kaksi rinnakkaista pääreittiä". |
+| Taipuva pala | Pituushaarukka ja maksimitaivutus omistajan 3D-tulosteesta (parametrit ovat dataa, ks. `FlexSettings`). |
+| IKEA Lillabo -osat | Mitat. |
 
 Ennen kuin nämä ovat mukana, generaattorin haara- ja X-risteysmutaatiot hylkäävät itsensä
 siististi ("signatuurille ei ole toteutusta") — runko pysyy silti ehjänä.

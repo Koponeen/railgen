@@ -13,12 +13,7 @@ import { balanceRuns, buildSkeleton, cloneSkeleton, skeletonGapMm, unitOf, type 
 
 const library = defaultLibrary()
 const elements = buildElementLibrary(bundledElementSpecs(), library, new Ledger(unlimitedInventory()))
-const table = buildFillTable(
-  library
-    .straights()
-    .filter((piece) => !piece.tags.includes('bridge-deck'))
-    .map((piece) => piece.straightLengthMm as number),
-)
+const table = buildFillTable(library.fillerStraights().map((piece) => piece.straightLengthMm as number))
 const mask = buildMask({ kind: 'rect', widthMm: 2000, depthMm: 1500 })
 
 function skeletonFor(seed: number): Skeleton {
@@ -118,7 +113,7 @@ describe('run balancing', () => {
 })
 
 describe('mutations preserve the invariants', () => {
-  const context = { elements, table, allowConnectorFlip: true }
+  const context = { elements, table }
 
   it('leaves the closure residual untouched when only lengths move', () => {
     const shift = MUTATIONS.find((mutation) => mutation.id === 'shift-length')!
@@ -142,21 +137,29 @@ describe('mutations preserve the invariants', () => {
     }
   })
 
-  it('keeps a hill inside the run it replaces', () => {
-    const hill = MUTATIONS.find((mutation) => mutation.id === 'hill')!
-    for (let seed = 0; seed < 20; seed += 1) {
-      const skeleton = skeletonFor(seed)
-      const result = hill.apply(skeleton, context, makeRng(seed))
-      if (!result.ok) continue
-      for (const [index, elementId] of Object.entries(result.skeleton.hills)) {
-        expect(elements.get(elementId).alongMm).toBeLessThanOrEqual(result.skeleton.runsMm[Number(index)])
+  it('keeps an inserted element inside the run it replaces', () => {
+    for (const id of ['hill', 'siding']) {
+      const mutation = MUTATIONS.find((candidate) => candidate.id === id)!
+      for (let seed = 0; seed < 20; seed += 1) {
+        const skeleton = skeletonFor(seed)
+        const result = mutation.apply(skeleton, context, makeRng(seed))
+        if (!result.ok) continue
+        for (const [index, elementId] of Object.entries(result.skeleton.inserts)) {
+          expect(elements.get(elementId).alongMm, id).toBeLessThanOrEqual(result.skeleton.runsMm[Number(index)])
+        }
       }
     }
   })
 
-  it('refuses a hill without the connector-flip setting', () => {
-    const hill = MUTATIONS.find((mutation) => mutation.id === 'hill')!
-    const result = hill.apply(skeletonFor(1), { elements, table }, makeRng(1))
-    expect(result).toEqual({ ok: false, reason: 'requires-connector-flip' })
+  it('leaves the loop geometry untouched when an element is inserted into a run', () => {
+    for (const id of ['hill', 'siding']) {
+      const mutation = MUTATIONS.find((candidate) => candidate.id === id)!
+      const skeleton = skeletonFor(3)
+      const result = mutation.apply(skeleton, context, makeRng(3))
+      if (!result.ok) continue
+      // Upotettu elementti kulkee osuuden suuntaisesti, joten sulkeutuminen säilyy.
+      expect(result.skeleton.residual, id).toEqual(skeleton.residual)
+      expect(result.skeleton.runsMm, id).toEqual(skeleton.runsMm)
+    }
   })
 })

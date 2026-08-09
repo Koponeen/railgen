@@ -1,6 +1,9 @@
 import straights from '../../data/pieces/straights.json'
 import curves from '../../data/pieces/curves.json'
 import elevation from '../../data/pieces/elevation.json'
+import switches from '../../data/pieces/switches.json'
+import crossings from '../../data/pieces/crossings.json'
+import terminals from '../../data/pieces/terminals.json'
 import { resolvePiece, validatePiece, type PieceProblem, type PieceSpec, type ResolvedPiece } from './pieces'
 import { signaturesMatch } from './ports'
 
@@ -17,8 +20,14 @@ export interface PieceLibrary {
   has(id: string): boolean
   /** Palat, jotka voivat korvata annetun palan (sama porttisignatuuri). */
   substitutesFor(id: string): ResolvedPiece[]
-  /** Suorat palat pituusjärjestyksessä — segmentintäytön raaka-aine. */
+  /** Kaikki suorat palat pituusjärjestyksessä. */
   straights(): ResolvedPiece[]
+  /**
+   * Suorat, joilla välejä saa täyttää: tavalliset kolo -> tappi -palat.
+   * Sukupuolenvaihtajat (B/C-sarja) ja sillan kannet jätetään pois — niitä
+   * käytetään tarkoituksella tiettyyn kohtaan, ei yleisenä täytteenä.
+   */
+  fillerStraights(): ResolvedPiece[]
   byTag(tag: string): ResolvedPiece[]
 }
 
@@ -80,11 +89,23 @@ export function buildLibrary(specs: readonly PieceSpec[]): PieceLibrary {
         .filter((piece) => piece.kind === 'straight' && piece.straightLengthMm !== null)
         .sort((a, b) => (a.straightLengthMm as number) - (b.straightLengthMm as number))
     },
+    fillerStraights() {
+      return this.straights().filter(
+        (piece) => !piece.tags.includes('gender-changer') && !piece.tags.includes('bridge-deck'),
+      )
+    },
     byTag: (tag) => pieces.filter((piece) => piece.tags.includes(tag)),
   }
 }
 
-const BUNDLED_SPECS = [...straights, ...curves, ...elevation] as unknown as PieceSpec[]
+const BUNDLED_SPECS = [
+  ...straights,
+  ...curves,
+  ...elevation,
+  ...switches,
+  ...crossings,
+  ...terminals,
+] as unknown as PieceSpec[]
 
 let cached: PieceLibrary | null = null
 

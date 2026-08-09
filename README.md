@@ -232,8 +232,10 @@ Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
   ehdokkaiden pisteytys. Ks. `docs/GENERATION.md`.
 
 Vaiheet 1a ja 1b eivät vielä näy käyttöliittymässä — sivut tulevat vaiheessa 1c.
-Vaihteiden ja risteysten mitat odottavat tarkistusta lähteestä; siihen asti haara- ja
-risteysmutaatiot hylkäävät itsensä siististi (`docs/PIECE_LIBRARY.md`).
+
+Palakirjasto kattaa suorat sukupuolivariantteineen, kaaret, rampit, sillan kannet,
+kaarrevaihteet, T- ja tähtiristeykset, ristit ja puskurit. Loput odottavat lähdetietoa;
+`docs/PIECE_LIBRARY.md` kertoo kustakin, mikä täsmälleen puuttuu.
 
 ```
 npm install

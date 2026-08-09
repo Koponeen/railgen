@@ -3,8 +3,8 @@ import { angleDifferenceDeg, dirToDegrees } from '../core/dir'
 import type { Ledger } from '../core/inventory'
 import type { PieceLibrary } from '../core/library'
 import { polygonBBox, unionBBox, type BBox } from '../core/path'
-import { placeAtFrame, placedBBox, startFrame, type Frame, type PlacedPiece } from '../core/pieces'
-import { portSignatures } from '../core/ports'
+import { placeAtFrame, placeTerminal, placedBBox, startFrame, type Frame, type PlacedPiece } from '../core/pieces'
+import { portSignatures, transformPort } from '../core/ports'
 
 // Elementti = makropala (README luku 3). Elementtikirjasto on dataa kuten
 // palakirjastokin: uusi elementti on rivi `data/elements/`-tiedostoon.
@@ -13,7 +13,7 @@ import { portSignatures } from '../core/ports'
 // lasketaan elementin päätyporteista, joten se on suoraan verrattavissa palojen
 // signatuureihin.
 
-export type ElementRole = 'through' | 'turn' | 'uturn' | 'hill' | 'branch' | 'crossing'
+export type ElementRole = 'through' | 'turn' | 'uturn' | 'hill' | 'siding' | 'branch' | 'crossing'
 
 export interface ElementStep {
   piece: string
@@ -21,6 +21,8 @@ export interface ElementStep {
   mirror?: boolean
   /** Kuljetaan pala väärinpäin — laskeva ramppi mennään yläpäästä sisään. */
   reverse?: boolean
+  /** Sivuhaara: palat, jotka asennetaan tämän palan haaraporttiin. */
+  branch?: { portId: string; steps: ElementStep[] }
 }
 
 export interface ElementSpec {
@@ -61,9 +63,17 @@ export interface ElementLibrary {
   forSignature(signatures: readonly string[]): ResolvedElement[]
 }
 
-interface Traversal {
+export interface Traversal {
   placed: PlacedPiece[]
   exit: Frame
+  /**
+   * Liitokset paloparien välillä `placed`-taulukon indekseinä. Sivuhaaran
+   * jälkeen taulukkojärjestys ei enää vastaa ketjun järjestystä, joten
+   * naapuruus on kirjattava erikseen — törmäystarkistus tarvitsee sen.
+   */
+  edges: [number, number][]
+  /** Pääketjun viimeinen pala; sivuhaarat eivät jatka ketjua. */
+  lastIndex: number
 }
 
 /**
@@ -80,38 +90,81 @@ export function traverseElement(
 ): Traversal | null {
   const placed: PlacedPiece[] = []
   const taken: string[] = []
-  let cursor = frame
+  const edges: [number, number][] = []
 
-  for (const step of spec.steps) {
-    if (!library.has(step.piece)) {
-      for (const id of taken) ledger.release(id)
-      return null
-    }
+  const result = traverseSteps(spec, spec.steps, library, ledger, frame, mirror, placed, taken, edges, -1)
+  if (!result) {
+    for (const id of taken) ledger.release(id)
+    return null
+  }
+  return { placed, exit: result.exit, edges, lastIndex: result.lastIndex }
+}
+
+/**
+ * Kulkee askelketjun läpi. Umpipää (puskuri) päättää ketjun, joten sen jälkeen
+ * ei synny uutta kohdistinta — sivuhaarat päättyvät aina umpipäähän.
+ */
+function traverseSteps(
+  spec: ElementSpec,
+  steps: readonly ElementStep[],
+  library: PieceLibrary,
+  ledger: Ledger,
+  frame: Frame,
+  mirror: boolean,
+  placed: PlacedPiece[],
+  taken: string[],
+  edges: [number, number][],
+  attachedTo: number,
+): { exit: Frame; lastIndex: number } | null {
+  let cursor = frame
+  let previous = attachedTo
+
+  for (const [stepIndex, step] of steps.entries()) {
+    if (!library.has(step.piece)) return null
     const piece = library.get(step.piece)
+    // Peilaus koskee koko elementtiä; yksittäisen askeleen lippu kääntää sen.
+    const stepMirror = mirror !== (step.mirror ?? false)
+    const allowConnectorFlip = spec.connectorPolicy === 'flexible'
+
+    if (piece.isTerminal) {
+      if (stepIndex !== steps.length - 1) return null
+      const terminal = placeTerminal(piece, cursor, { mirror: stepMirror, allowConnectorFlip })
+      if (!terminal || !ledger.take(piece.id)) return null
+      taken.push(piece.id)
+      const index = placed.push(terminal) - 1
+      if (previous >= 0) edges.push([previous, index])
+      return { exit: cursor, lastIndex: index }
+    }
+
     const [first, second] = piece.mainPorts
-    if (!first || !second) {
-      for (const id of taken) ledger.release(id)
-      return null
-    }
-    const entryPortId = step.reverse ? second.id : first.id
-    const exitPortId = step.reverse ? first.id : second.id
+    if (!first || !second) return null
     const result = placeAtFrame(piece, cursor, {
-      // Peilaus koskee koko elementtiä; yksittäisen askeleen lippu kääntää sen.
-      mirror: mirror !== (step.mirror ?? false),
-      entryPortId,
-      exitPortId,
-      allowConnectorFlip: spec.connectorPolicy === 'flexible',
+      mirror: stepMirror,
+      entryPortId: step.reverse ? second.id : first.id,
+      exitPortId: step.reverse ? first.id : second.id,
+      allowConnectorFlip,
     })
-    if (!result || !ledger.take(piece.id)) {
-      for (const id of taken) ledger.release(id)
-      return null
-    }
+    if (!result || !ledger.take(piece.id)) return null
     taken.push(piece.id)
-    placed.push(result.placed)
+    const index = placed.push(result.placed) - 1
+    if (previous >= 0) edges.push([previous, index])
+
+    if (step.branch) {
+      const port = piece.ports.find((candidate) => candidate.id === step.branch?.portId)
+      if (!port) return null
+      const world = transformPort(port, result.placed.placement)
+      const branchFrame: Frame = { x: world.x, y: world.y, dir: world.dir, level: world.levelOffset, open: world.connector }
+      // Sivuhaara riippuu tästä palasta muttei jatka pääketjua.
+      if (!traverseSteps(spec, step.branch.steps, library, ledger, branchFrame, stepMirror, placed, taken, edges, index)) {
+        return null
+      }
+    }
+
+    previous = index
     cursor = result.exit
   }
 
-  return { placed, exit: cursor }
+  return { exit: cursor, lastIndex: previous }
 }
 
 /** Laskee elementin geometrian sijoittamalla sen kerran kanoniseen kohdistimeen. */

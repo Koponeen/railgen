@@ -12,8 +12,6 @@ import { balanceRuns, cloneSkeleton, turnElements, unitOf, type Skeleton } from 
 export interface MutationContext {
   elements: ElementLibrary
   table: FillTable
-  /** Mäki tarvitsee laskevan rampin, joka kääntää liittimen sukupuolen. */
-  allowConnectorFlip?: boolean
 }
 
 export type MutationResult = { ok: true; skeleton: Skeleton } | { ok: false; reason: string }
@@ -94,26 +92,34 @@ const refillRun: Mutation = {
   },
 }
 
-/** Mäki: ramppi ylös, kansi, ramppi alas suoralle osuudelle. */
-const hill: Mutation = {
-  id: 'hill',
-  apply(skeleton, context, rng) {
-    if (!context.allowConnectorFlip) return rejected('requires-connector-flip')
-    const hills = context.elements.byRole('hill')
-    if (hills.length === 0) return rejected('no-hill-element')
+/**
+ * Upottaa elementin suoralle osuudelle. Elementin pääreitti kulkee osuuden
+ * suuntaisesti ja on yhtä pitkä kuin korvaamansa suora, joten silmukan
+ * geometria ei muutu lainkaan — sulkeutumista ei tarvitse laskea uudelleen.
+ *
+ * `hill` = ramppi ylös, kansi, ramppi alas.
+ * `siding` = vaihde + pätkä + puskuri (README luku 6).
+ */
+function insertOnRun(id: string, role: 'hill' | 'siding'): Mutation {
+  return {
+    id,
+    apply(skeleton, context, rng) {
+      const candidates = context.elements.byRole(role)
+      if (candidates.length === 0) return rejected(`no-${role}-element`)
 
-    const free = skeleton.runsMm.map((_, i) => i).filter((i) => skeleton.hills[i] === undefined)
-    for (const index of rng.shuffle(free)) {
-      for (const element of rng.shuffle(hills)) {
-        const remaining = skeleton.runsMm[index] - element.alongMm
-        if (remaining < 0 || !isFillable(context.table, remaining)) continue
-        const next = cloneSkeleton(skeleton)
-        next.hills[index] = element.id
-        return { ok: true, skeleton: next }
+      const free = skeleton.runsMm.map((_, i) => i).filter((i) => skeleton.inserts[i] === undefined)
+      for (const index of rng.shuffle(free)) {
+        for (const element of rng.shuffle(candidates)) {
+          const remaining = skeleton.runsMm[index] - element.alongMm
+          if (remaining < 0 || !isFillable(context.table, remaining)) continue
+          const next = cloneSkeleton(skeleton)
+          next.inserts[index] = element.id
+          return { ok: true, skeleton: next }
+        }
       }
-    }
-    return rejected('no-run-long-enough')
-  },
+      return rejected('no-run-long-enough')
+    },
+  }
 }
 
 /**
@@ -136,7 +142,8 @@ export const MUTATIONS: Mutation[] = [
   swapCorner,
   shiftLength,
   refillRun,
-  hill,
+  insertOnRun('hill', 'hill'),
+  insertOnRun('siding', 'siding'),
   requiresRole('shortcut', 'branch'),
   requiresRole('extra-loop', 'branch'),
   requiresRole('overpass', 'crossing'),

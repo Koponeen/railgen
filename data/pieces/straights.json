@@ -33,5 +33,55 @@
     "lengthMm": 216,
     "tags": ["straight", "basic"],
     "source": "README luku 2 (woodenrailway.info Track Guide)"
+  },
+
+  {
+    "id": "B",
+    "kind": "straight",
+    "lengthMm": 144,
+    "connectors": ["pin", "pin"],
+    "tags": ["straight", "gender-changer", "symmetric-connectors", "retired"],
+    "source": "woodenrailway.info Track Guide: B on A:n mittainen, kaksi urospuolista liitintä"
+  },
+  {
+    "id": "C",
+    "kind": "straight",
+    "lengthMm": 144,
+    "connectors": ["socket", "socket"],
+    "tags": ["straight", "gender-changer", "symmetric-connectors", "retired"],
+    "source": "woodenrailway.info Track Guide: C on A:n mittainen, kaksi naaraspuolista liitintä"
+  },
+  {
+    "id": "B1",
+    "kind": "straight",
+    "lengthMm": 108,
+    "connectors": ["pin", "pin"],
+    "tags": ["straight", "gender-changer", "symmetric-connectors", "retired"],
+    "source": "woodenrailway.info Track Guide: B1 = A1:n mitta, kaksi urospuolista liitintä"
+  },
+  {
+    "id": "C1",
+    "kind": "straight",
+    "lengthMm": 108,
+    "connectors": ["socket", "socket"],
+    "tags": ["straight", "gender-changer", "symmetric-connectors", "retired"],
+    "source": "woodenrailway.info Track Guide: C1 = A1:n mitta, kaksi naaraspuolista liitintä"
+  },
+  {
+    "id": "B2",
+    "kind": "straight",
+    "lengthMm": 54,
+    "connectors": ["pin", "pin"],
+    "tags": ["straight", "basic", "gender-changer", "symmetric-connectors"],
+    "notes": "Lähde: \"arguably the single most useful track pieces because they can solve both gender alignment and track gap issues\".",
+    "source": "woodenrailway.info Track Guide: B2 = A2:n mitta, kaksi urospuolista liitintä (#33333)"
+  },
+  {
+    "id": "C2",
+    "kind": "straight",
+    "lengthMm": 54,
+    "connectors": ["socket", "socket"],
+    "tags": ["straight", "basic", "gender-changer", "symmetric-connectors"],
+    "source": "woodenrailway.info Track Guide: C2 = A2:n mitta, kaksi naaraspuolista liitintä (#33333)"
   }
 ]

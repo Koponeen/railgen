@@ -75,8 +75,7 @@ export function generate(options: GenerateOptions): GenerateResult {
   // muuten runko mitoitettaisiin pituuksiin, joita ei voi rakentaa.
   const table = buildFillTable(
     library
-      .straights()
-      .filter((piece) => !piece.tags.includes('bridge-deck'))
+      .fillerStraights()
       .filter((piece) => inventory.unlimited || (inventory.counts[piece.id] ?? 0) > 0)
       .map((piece) => piece.straightLengthMm as number),
   )
@@ -99,7 +98,7 @@ export function generate(options: GenerateOptions): GenerateResult {
     flex: options.flex,
     allowConnectorFlip: options.allowConnectorFlip,
   }
-  const mutationContext: MutationContext = { elements, table, allowConnectorFlip: options.allowConnectorFlip }
+  const mutationContext: MutationContext = { elements, table }
 
   const budget = inventoryBudget(inventory, library)
   const candidates: Candidate[] = []

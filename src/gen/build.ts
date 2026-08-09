@@ -34,6 +34,8 @@ export interface BuildContext {
 
 export interface Track {
   pieces: PlacedPiece[]
+  /** Liitokset paloparien välillä `pieces`-indekseinä, sauma mukaan lukien. */
+  joints: [number, number][]
   /** Radan pituus keskilinjasummana (README luku 7). */
   lengthMm: number
   /** Äärimitat jalanjälkien ympäriltä. */
@@ -50,6 +52,25 @@ export interface Track {
 export function materialise(skeleton: Skeleton, context: BuildContext, ledger: Ledger, rng: Rng): Track | null {
   const { library, elements } = context
   const pieces: PlacedPiece[] = []
+  // Liitokset kirjataan erikseen: sivuhaaran jälkeen taulukkojärjestys ei enää
+  // vastaa ketjun järjestystä.
+  const joints: [number, number][] = []
+  let previous = -1
+
+  const appendTraversal = (traversal: { placed: PlacedPiece[]; edges: [number, number][]; lastIndex: number }): void => {
+    const base = pieces.length
+    pieces.push(...traversal.placed)
+    for (const [a, b] of traversal.edges) joints.push([base + a, base + b])
+    if (previous >= 0) joints.push([previous, base])
+    previous = base + traversal.lastIndex
+  }
+
+  const appendPiece = (placed: PlacedPiece): void => {
+    const index = pieces.push(placed) - 1
+    if (previous >= 0) joints.push([previous, index])
+    previous = index
+  }
+
   const start = startFrame(skeleton.startPoint.x, skeleton.startPoint.y, skeleton.startDir, 0, 'pin')
   let cursor: Frame = start
 
@@ -59,20 +80,22 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
     if (!element) return null
     const turned = traverseElement(element.spec, library, ledger, cursor, corner.mirror)
     if (!turned) return null
-    pieces.push(...turned.placed)
+    appendTraversal(turned)
     cursor = turned.exit
 
     let remainingMm = skeleton.runsMm[i]
 
-    const hillId = skeleton.hills[i]
-    if (hillId !== undefined) {
-      const hill = elements.byId.get(hillId)
-      if (!hill || hill.alongMm > remainingMm + 1e-6) return null
-      const climbed = traverseElement(hill.spec, library, ledger, cursor, false)
-      if (!climbed) return null
-      pieces.push(...climbed.placed)
-      cursor = climbed.exit
-      remainingMm -= hill.alongMm
+    // Osuuteen upotettu elementti (mäki, sivuraide) syö osan suorasta osuudesta;
+    // loppu täytetään tavalliseen tapaan.
+    const insertId = skeleton.inserts[i]
+    if (insertId !== undefined) {
+      const insert = elements.byId.get(insertId)
+      if (!insert || insert.alongMm > remainingMm + 1e-6) return null
+      const inserted = traverseElement(insert.spec, library, ledger, cursor, false)
+      if (!inserted) return null
+      appendTraversal(inserted)
+      cursor = inserted.exit
+      remainingMm -= insert.alongMm
     }
 
     // Osuuskohtainen haara satunnaisvirrasta: yhden osuuden täytön voi arpoa
@@ -82,10 +105,14 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
     for (const pieceId of fill) {
       const result = placeAtFrame(library.get(pieceId), cursor, { allowConnectorFlip: context.allowConnectorFlip })
       if (!result) return null
-      pieces.push(result.placed)
+      appendPiece(result.placed)
       cursor = result.exit
     }
   }
+
+  // Sauma: viimeinen pala liittyy ensimmäiseen. Liitos ei sulkeudu täsmälleen,
+  // joten se on kirjattava naapuruudeksi eikä pääteltävä porttien osumisesta.
+  if (previous >= 0 && pieces.length > 1) joints.push([previous, 0])
 
   const closure = evaluateClosure(
     jointsForChain(pieces.map((placed) => library.get(placed.pieceId)), true),
@@ -103,6 +130,7 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
 
   return {
     pieces,
+    joints,
     lengthMm: pieces.reduce((sum, placed) => sum + library.get(placed.pieceId).lengthMm, 0),
     bbox,
     closure,
@@ -110,7 +138,7 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
     shortages: ledger.shortages(),
     maxLevel: pieces.reduce((max, placed) => Math.max(max, placed.placement.level + library.get(placed.pieceId).levelDelta), 0),
     fitsArea,
-    collisions: countCollisions(pieces, library),
+    collisions: countCollisions(pieces, library, joints),
   }
 }
 
@@ -119,7 +147,11 @@ export function materialise(skeleton: Skeleton, context: BuildContext, ledger: L
  * samalla tasolla (tai tasoväliltään limittäiset) palat voivat törmätä —
  * ylikulku on nimenomaan sallittu (README luku 4).
  */
-export function countCollisions(pieces: readonly PlacedPiece[], library: PieceLibrary): number {
+export function countCollisions(
+  pieces: readonly PlacedPiece[],
+  library: PieceLibrary,
+  joints: readonly [number, number][],
+): number {
   const samples = pieces.map((placed) => samplePath(placedSegments(placed, library.get(placed.pieceId))))
   const boxes = samples.map((points) => polygonBBox(points))
   const levels = pieces.map((placed) => {
@@ -127,14 +159,14 @@ export function countCollisions(pieces: readonly PlacedPiece[], library: PieceLi
     return { low: placed.placement.level, high: placed.placement.level + piece.levelDelta }
   })
 
+  // Liitoksessa kiinni olevat palat koskettavat toisiaan määritelmän mukaan.
+  const connected = new Set(joints.map(([a, b]) => (a < b ? `${a},${b}` : `${b},${a}`)))
   const threshold = TRACK_WIDTH_MM * 0.9
   let collisions = 0
 
   for (let i = 0; i < pieces.length; i += 1) {
-    for (let j = i + 2; j < pieces.length; j += 1) {
-      // Ketjussa vierekkäiset palat koskettavat toisiaan liitoksessa; myös
-      // silmukan sulkeva pari on vierekkäinen.
-      if (i === 0 && j === pieces.length - 1) continue
+    for (let j = i + 1; j < pieces.length; j += 1) {
+      if (connected.has(`${i},${j}`)) continue
       if (levels[i].low > levels[j].high || levels[j].low > levels[i].high) continue
       if (!bboxesOverlap(grow(boxes[i], threshold), boxes[j])) continue
       if (minDistance(samples[i], samples[j]) < threshold) collisions += 1
