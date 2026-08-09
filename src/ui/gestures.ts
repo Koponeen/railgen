@@ -84,6 +84,17 @@ export class GestureController {
     container.addEventListener('wheel', this.onWheel, { passive: false })
   }
 
+  /** Irrottaa kuuntelijat, kun kartta poistetaan näkymästä. */
+  destroy(): void {
+    this.container.removeEventListener('pointerdown', this.onDown)
+    this.container.removeEventListener('pointermove', this.onMove)
+    this.container.removeEventListener('pointerup', this.onUp)
+    this.container.removeEventListener('pointercancel', this.onUp)
+    this.container.removeEventListener('wheel', this.onWheel)
+    this.pointers.clear()
+    this.phase = { kind: 'idle' }
+  }
+
   private screenToViewBox(inv: DOMMatrix, p: Point): Point {
     const svgPt = this.svg.createSVGPoint()
     svgPt.x = p.x

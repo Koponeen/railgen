@@ -2,20 +2,113 @@
   "app": {
     "title": "BRIO Track Generator"
   },
-  "toolbar": {
-    "label": "Tools",
-    "draw": "Draw",
-    "undo": "Undo",
-    "redo": "Redo",
-    "fit": "Fit view"
+  "common": {
+    "cm": "cm",
+    "metres": "{value} m",
+    "increase": "Increase: {label}",
+    "decrease": "Decrease: {label}"
   },
-  "hud": {
-    "mode": {
-      "view": "view",
-      "draw": "draw"
+  "nav": {
+    "label": "Pages",
+    "area": "Area",
+    "inventory": "Pieces",
+    "generate": "Generate",
+    "result": "Result"
+  },
+  "toolbar": {
+    "label": "Tools"
+  },
+  "area": {
+    "title": "Floor area",
+    "shape": "Shape",
+    "shapeRect": "Rectangle",
+    "shapeL": "L shape",
+    "width": "Width",
+    "depth": "Depth",
+    "cutWidth": "Cut corner width",
+    "cutDepth": "Cut corner depth",
+    "corner": "Cut corner",
+    "cornerNw": "Top left",
+    "cornerNe": "Top right",
+    "cornerSw": "Bottom left",
+    "cornerSe": "Bottom right",
+    "quickSizes": "Quick sizes",
+    "quick": {
+      "small": "Small rug",
+      "rug": "Rug",
+      "large": "Large rug",
+      "floor": "Living room floor"
     },
-    "summary": "mode: {mode} · zoom: {zoom} · lines: {count}",
-    "selected": "selected"
+    "preview": "Preview",
+    "cells": "The area fits {count} cells (216 mm)."
+  },
+  "inventory": {
+    "title": "Pieces",
+    "mode": "Mode",
+    "modeOwn": "My pieces",
+    "modeSkip": "Not sure",
+    "ownHint": "{count} pieces in total. The track will fit within these.",
+    "skipHint": "Piece counts are unlimited, and the result is a shopping list.",
+    "presets": "Ready-made amounts",
+    "presetHint": "Generic size classes, not the contents of any particular set.",
+    "preset": {
+      "starter": "Starter collection",
+      "medium": "Medium",
+      "big": "Large collection"
+    },
+    "pieceCount": "{count} pieces",
+    "group": {
+      "straight": "Straights",
+      "curve": "Curves",
+      "switch": "Switches",
+      "crossing": "Crossings",
+      "elevation": "Ramps and bridges",
+      "terminal": "End pieces"
+    },
+    "showAll": "Show every piece type",
+    "showAllHint": "Including rare and discontinued pieces.",
+    "flex": "Flex piece",
+    "flexEnabled": "Flex piece in use",
+    "flexHint": "Your own bendable piece, which absorbs the closing error.",
+    "flexSkipHint": "Not available in shopping list mode: the list may only contain pieces you can buy.",
+    "flexCount": "Flex pieces"
+  },
+  "generate": {
+    "seed": "Seed",
+    "regenerate": "Generate again",
+    "showResult": "Result",
+    "working": "Generating…",
+    "summary": "{pieces} pieces · {length} m · tightness {tightness}",
+    "failure": {
+      "unknown": "No track was found with these settings.",
+      "area-too-small": "The area is too small for a track. Try a larger area.",
+      "no-corner-elements-affordable": "Not enough curves for a single corner. Add curves or try shopping list mode.",
+      "inventory-or-placement-failed": "Not enough pieces. Add pieces or shrink the area.",
+      "closure-beyond-budget": "The track falls {shortfall} mm short and does not close. Try another seed or enable the flex piece.",
+      "joint-over-safety-cap": "One joint would be too sharp. Try another seed.",
+      "self-collision": "The track would run into itself. Try a larger area or another seed.",
+      "outside-area": "The track does not fit the area. Try a larger area."
+    }
+  },
+  "result": {
+    "title": "Track",
+    "empty": "Generate a track first.",
+    "length": "Length",
+    "extents": "Overall size",
+    "pieces": "Pieces",
+    "tightness": "Tightness",
+    "levels": "Levels",
+    "partsList": "Parts list",
+    "shoppingList": "Shopping list",
+    "missing": "Missing",
+    "png": "PNG",
+    "print": "Print",
+    "share": {
+      "button": "Share",
+      "copied": "Link copied.",
+      "too-long": "The track is too large to share as a link.",
+      "failed": "Sharing failed."
+    }
   },
   "piece": {
     "A2": { "name": "Straight 54 mm" },

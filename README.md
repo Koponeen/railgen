@@ -230,8 +230,11 @@ Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
 - **Vaihe 1b** (generointiputki): `src/gen/` — aluemaski, solureitti, runko ja
   sulkeutumisen ratkaisu, elementtikirjasto datana (`data/elements/`), mutaatiot ja
   ehdokkaiden pisteytys. Ks. `docs/GENERATION.md`.
+- **Vaihe 1c** (sivut): alue, palat, generointi ja tulos — SVG geometriadatasta, osaluettelo
+  tai ostoslista, PNG, tulostus ja jako URL:lla. Ks. `docs/UI.md`.
 
-Vaiheet 1a ja 1b eivät vielä näy käyttöliittymässä — sivut tulevat vaiheessa 1c.
+Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan. Piirtotila, osion korvaus ja
+autosolver tulevat vaiheissa 2–5.
 
 Palakirjasto kattaa suorat sukupuolivariantteineen, kaaret, rampit, sillan kannet,
 vaihteet, T- ja tähtiristeykset, ristit ja puskurit. Loput odottavat lähdetietoa;

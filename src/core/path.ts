@@ -124,26 +124,31 @@ export function samplePath(segments: readonly Segment[], maxStepMm = 30): Vec[] 
 }
 
 /**
- * Jalanjälki: keskilinja levitettynä laudan leveyteen. Palautetaan yhtenä
- * monikulmiona (ulkoreuna eteenpäin, sisäreuna takaisin).
+ * Keskilinjan rinnakkaissiirto: pisteet `offsetMm` päässä keskilinjasta.
+ * Positiivinen siirto on kulkusuunnasta katsoen oikealle. Urat ja jalanjäljen
+ * reunat johdetaan kaikki tästä, joten geometrialla on yksi lähde.
  */
-export function footprintPolygon(segments: readonly Segment[], widthMm: number = TRACK_WIDTH_MM): Vec[] {
-  const half = widthMm / 2
-  const left: Vec[] = []
-  const right: Vec[] = []
+export function offsetPolyline(segments: readonly Segment[], offsetMm: number): Vec[] {
+  const points: Vec[] = []
   for (const segment of segments) {
     const steps = segment.type === 'line' ? 1 : Math.max(2, Math.ceil(Math.abs(segment.sweepDeg) / 5))
     for (let i = 0; i <= steps; i += 1) {
       const t = i / steps
       const point = segmentPoint(segment, t)
       const heading = segmentHeadingDeg(segment, t) * DEG
-      const nx = -Math.sin(heading)
-      const ny = Math.cos(heading)
-      left.push({ x: point.x + nx * half, y: point.y + ny * half })
-      right.push({ x: point.x - nx * half, y: point.y - ny * half })
+      points.push({ x: point.x - Math.sin(heading) * offsetMm, y: point.y + Math.cos(heading) * offsetMm })
     }
   }
-  return [...left, ...right.reverse()]
+  return points
+}
+
+/**
+ * Jalanjälki: keskilinja levitettynä laudan leveyteen. Palautetaan yhtenä
+ * monikulmiona (ulkoreuna eteenpäin, sisäreuna takaisin).
+ */
+export function footprintPolygon(segments: readonly Segment[], widthMm: number = TRACK_WIDTH_MM): Vec[] {
+  const half = widthMm / 2
+  return [...offsetPolyline(segments, half), ...offsetPolyline(segments, -half).reverse()]
 }
 
 export interface BBox {

@@ -1,6 +1,8 @@
-// Kartan sisäinen tila vaiheessa 0 (elerunko): ei vielä palakirjastoa eikä
-// generaattoria, vain tyhjä kartta + piirretyt raakaviivat, joilla eleitä testataan.
-// Tämä tila elää kokonaan Preactin ulkopuolella (imperatiivinen saareke).
+import type { AreaShape } from '../gen/mask'
+import type { Track } from '../gen/build'
+
+// Kartan sisäinen tila. Tämä elää kokonaan Preactin ulkopuolella
+// (imperatiivinen saareke, docs/IMPLEMENTATION_PLAN.md luku 2).
 
 export interface Point {
   x: number
@@ -23,21 +25,26 @@ export type Mode = 'view' | 'draw'
 export interface AppState {
   view: ViewTransform
   mode: Mode
+  /** Lattia-alue millimetreinä; kartan viewBox seuraa tätä. */
+  area: AreaShape
+  /** Näytettävä rata, tai null jos sitä ei ole vielä generoitu. */
+  track: Track | null
+  /** Valittu pala `track.pieces`-indeksinä. */
+  selectedPiece: number | null
+  /** Vapaalla kädellä piirretyt viivat (vaihe 2 ottaa nämä käyttöön). */
   lines: DrawnLine[]
-  selectedId: string | null
 }
 
-// Lattia-alue mikrogridin mukaisissa millimetreissä (README luku 2 & 7).
-// Vastaa n. pikakokoa "matto 2x1,5 m" kunnes sivu 1 (alueen valinta) tulee mukaan.
-export const WORLD_WIDTH_MM = 2000
-export const WORLD_HEIGHT_MM = 1500
+export const DEFAULT_AREA: AreaShape = { kind: 'rect', widthMm: 2000, depthMm: 1500 }
 
-export function createInitialState(): AppState {
+export function createInitialState(area: AreaShape = DEFAULT_AREA): AppState {
   return {
     view: { x: 0, y: 0, scale: 1 },
     mode: 'view',
+    area,
+    track: null,
+    selectedPiece: null,
     lines: [],
-    selectedId: null,
   }
 }
 

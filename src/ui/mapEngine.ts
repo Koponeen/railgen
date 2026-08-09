@@ -1,51 +1,52 @@
+import type { PieceLibrary } from '../core/library'
+import type { Track } from '../gen/build'
+import type { AreaShape } from '../gen/mask'
 import { GestureController } from './gestures'
-import { applyView, fitView, lineBBox, render, zoomToBBox } from './render'
-import { createInitialState, History, makeLineId, type AppState, type DrawnLine, type Mode, type Point, type ViewTransform } from './state'
+import { applyView, fitView, pieceBBox, render, zoomToBBox } from './render'
+import { createInitialState, type AppState, type Point, type ViewTransform } from './state'
 
 // Kartta on imperatiivinen saareke Preactin ulkopuolella
-// (docs/IMPLEMENTATION_PLAN.md, vaihe 0). Tämä moduuli omistaa tilan,
+// (docs/IMPLEMENTATION_PLAN.md luku 2). Tämä moduuli omistaa näkymän,
 // elekäsittelyn ja piirron; Preact-kromi saa vain snapshotin ja callbackit.
 
 export interface MapEngineSnapshot {
-  mode: Mode
-  canUndo: boolean
-  canRedo: boolean
-  lineCount: number
-  selected: boolean
   zoom: number
+  /** Valittu pala radan `pieces`-indeksinä, tai null. */
+  selectedPiece: number | null
+  selectedPieceId: string | null
 }
 
 export interface MapEngineHandle {
-  toggleDraw: () => void
-  undo: () => void
-  redo: () => void
+  /** Vaihtaa näytettävän radan ja alueen ilman uudelleenmounttausta. */
+  update: (next: { area: AreaShape; track: Track | null }) => void
   fit: () => void
-}
-
-function snapshotOf(state: AppState, history: History): MapEngineSnapshot {
-  return {
-    mode: state.mode,
-    canUndo: history.canUndo(),
-    canRedo: history.canRedo(),
-    lineCount: state.lines.length,
-    selected: state.selectedId !== null,
-    zoom: state.view.scale,
-  }
+  destroy: () => void
 }
 
 export function mountMapEngine(
   container: HTMLElement,
   svg: SVGSVGElement,
   world: SVGGElement,
+  library: PieceLibrary,
+  initial: { area: AreaShape; track: Track | null },
   onChange: (snapshot: MapEngineSnapshot) => void,
 ): MapEngineHandle {
-  const state: AppState = createInitialState()
-  const history = new History(state.lines)
+  const state: AppState = createInitialState(initial.area)
+  state.track = initial.track
   let draft: Point[] | null = null
 
+  function snapshot(): MapEngineSnapshot {
+    const placed = state.selectedPiece === null ? null : state.track?.pieces[state.selectedPiece]
+    return {
+      zoom: state.view.scale,
+      selectedPiece: state.selectedPiece,
+      selectedPieceId: placed?.pieceId ?? null,
+    }
+  }
+
   function emit(): void {
-    render(world, state, draft)
-    onChange(snapshotOf(state, history))
+    render(world, state, draft, library)
+    onChange(snapshot())
   }
 
   function animateTo(target: ViewTransform): void {
@@ -57,31 +58,31 @@ export function mountMapEngine(
     }, 260)
   }
 
-  function selectLine(id: string): void {
-    state.selectedId = id
-    const line = state.lines.find((l) => l.id === id)
-    if (line) animateTo(zoomToBBox(lineBBox(line)))
+  function selectPiece(index: number): void {
+    state.selectedPiece = index
+    const bbox = pieceBBox(state, index, library)
+    if (bbox) animateTo(zoomToBBox(bbox, state.area))
     emit()
   }
 
   function deselectAndFit(): void {
-    state.selectedId = null
+    state.selectedPiece = null
     animateTo(fitView())
     emit()
   }
 
   function handleTap(client: { clientX: number; clientY: number }): void {
-    const el = document.elementFromPoint(client.clientX, client.clientY)
-    const lineEl = el instanceof Element ? el.closest('[data-line-id]') : null
-    const id = lineEl?.getAttribute('data-line-id')
-    if (id) {
-      selectLine(id)
-    } else if (state.selectedId) {
+    const element = document.elementFromPoint(client.clientX, client.clientY)
+    const pieceElement = element instanceof Element ? element.closest('[data-piece-index]') : null
+    const index = pieceElement?.getAttribute('data-piece-index')
+    if (index !== null && index !== undefined) {
+      selectPiece(Number(index))
+    } else if (state.selectedPiece !== null) {
       deselectAndFit()
     }
   }
 
-  new GestureController(container, svg, world, {
+  const gestures = new GestureController(container, svg, world, {
     getMode: () => state.mode,
     getView: () => state.view,
 
@@ -94,25 +95,23 @@ export function mountMapEngine(
       emit()
     },
 
+    // Piirtotila kytketään päälle vaiheessa 2; eleet ovat jo paikallaan.
     onDrawStart(point) {
       draft = [point]
       emit()
     },
     onDrawUpdate(points) {
       draft = points
-      render(world, state, draft) // nopea polku: ei snapshot-emittiä joka liikkeellä
+      render(world, state, draft, library)
     },
     onDrawCancel() {
       draft = null
       state.mode = 'view'
       emit()
     },
-    onDrawEnd(points) {
+    onDrawEnd() {
       draft = null
-      const line: DrawnLine = { id: makeLineId(), points }
-      state.lines = [...state.lines, line]
-      history.push(state.lines)
-      state.mode = 'view' // piirtotila on lyhytikäinen (README luku 7)
+      state.mode = 'view'
       emit()
     },
 
@@ -122,24 +121,14 @@ export function mountMapEngine(
   emit()
 
   return {
-    toggleDraw() {
-      state.mode = state.mode === 'draw' ? 'view' : 'draw'
-      emit()
-    },
-    undo() {
-      const prev = history.undo()
-      if (!prev) return
-      state.lines = prev
-      state.selectedId = null
-      emit()
-    },
-    redo() {
-      const next = history.redo()
-      if (!next) return
-      state.lines = next
-      state.selectedId = null
+    update(next) {
+      state.area = next.area
+      state.track = next.track
+      state.selectedPiece = null
+      state.view = fitView()
       emit()
     },
     fit: deselectAndFit,
+    destroy: () => gestures.destroy(),
   }
 }

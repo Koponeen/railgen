@@ -2,20 +2,113 @@
   "app": {
     "title": "BRIO-ratageneraattori"
   },
-  "toolbar": {
-    "label": "Työkalut",
-    "draw": "Piirrä",
-    "undo": "Kumoa",
-    "redo": "Tee uudelleen",
-    "fit": "Koko näkymä"
+  "common": {
+    "cm": "cm",
+    "metres": "{value} m",
+    "increase": "Lisää: {label}",
+    "decrease": "Vähennä: {label}"
   },
-  "hud": {
-    "mode": {
-      "view": "katselu",
-      "draw": "piirto"
+  "nav": {
+    "label": "Sivut",
+    "area": "Alue",
+    "inventory": "Palat",
+    "generate": "Generoi",
+    "result": "Tulos"
+  },
+  "toolbar": {
+    "label": "Työkalut"
+  },
+  "area": {
+    "title": "Lattia-alue",
+    "shape": "Muoto",
+    "shapeRect": "Suorakaide",
+    "shapeL": "L-muoto",
+    "width": "Leveys",
+    "depth": "Syvyys",
+    "cutWidth": "Leikatun nurkan leveys",
+    "cutDepth": "Leikatun nurkan syvyys",
+    "corner": "Leikattu nurkka",
+    "cornerNw": "Vasen ylä",
+    "cornerNe": "Oikea ylä",
+    "cornerSw": "Vasen ala",
+    "cornerSe": "Oikea ala",
+    "quickSizes": "Pikakoot",
+    "quick": {
+      "small": "Pieni matto",
+      "rug": "Matto",
+      "large": "Iso matto",
+      "floor": "Olohuoneen lattia"
     },
-    "summary": "tila: {mode} · zoom: {zoom} · viivoja: {count}",
-    "selected": "valittu"
+    "preview": "Esikatselu",
+    "cells": "Alueelle mahtuu {count} solua (216 mm)."
+  },
+  "inventory": {
+    "title": "Palat",
+    "mode": "Tapa",
+    "modeOwn": "Omat palat",
+    "modeSkip": "En tiedä",
+    "ownHint": "Yhteensä {count} palaa. Rata mahtuu näihin.",
+    "skipHint": "Palojen määrää ei rajoiteta, ja tuloksena on ostoslista.",
+    "presets": "Valmiit määrät",
+    "presetHint": "Yleisiä kokoluokkia, eivät minkään tietyn setin sisältö.",
+    "preset": {
+      "starter": "Aloituskokoelma",
+      "medium": "Keskikokoinen",
+      "big": "Iso kokoelma"
+    },
+    "pieceCount": "{count} palaa",
+    "group": {
+      "straight": "Suorat",
+      "curve": "Kaaret",
+      "switch": "Vaihteet",
+      "crossing": "Risteykset",
+      "elevation": "Rampit ja sillat",
+      "terminal": "Päätepalat"
+    },
+    "showAll": "Näytä kaikki palatyypit",
+    "showAllHint": "Myös harvinaiset ja vanhat palat.",
+    "flex": "Joustopala",
+    "flexEnabled": "Joustopala käytössä",
+    "flexHint": "Oma taipuva pala, joka nielee sulkeutumisen heiton.",
+    "flexSkipHint": "Ei käytössä ostoslistatilassa: listalla saa olla vain kaupasta saatavia paloja.",
+    "flexCount": "Joustopaloja"
+  },
+  "generate": {
+    "seed": "Siemen",
+    "regenerate": "Generoi uudelleen",
+    "showResult": "Tulos",
+    "working": "Generoidaan…",
+    "summary": "{pieces} palaa · {length} m · kireys {tightness}",
+    "failure": {
+      "unknown": "Rataa ei löytynyt näillä asetuksilla.",
+      "area-too-small": "Alue on liian pieni radalle. Kokeile suurempaa aluetta.",
+      "no-corner-elements-affordable": "Kaaria ei riitä yhteenkään mutkaan. Lisää kaaria tai kokeile ostoslistatilaa.",
+      "inventory-or-placement-failed": "Palat eivät riitä. Lisää paloja tai pienennä aluetta.",
+      "closure-beyond-budget": "Rata jää {shortfall} mm vajaaksi eikä sulkeudu. Kokeile toista siementä tai ota joustopala käyttöön.",
+      "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Kokeile toista siementä.",
+      "self-collision": "Rata osuisi itseensä. Kokeile suurempaa aluetta tai toista siementä.",
+      "outside-area": "Rata ei mahdu alueelle. Kokeile suurempaa aluetta."
+    }
+  },
+  "result": {
+    "title": "Rata",
+    "empty": "Generoi ensin rata.",
+    "length": "Pituus",
+    "extents": "Äärimitat",
+    "pieces": "Paloja",
+    "tightness": "Kireys",
+    "levels": "Tasoja",
+    "partsList": "Osaluettelo",
+    "shoppingList": "Ostoslista",
+    "missing": "Puuttuu",
+    "png": "PNG",
+    "print": "Tulosta",
+    "share": {
+      "button": "Jaa",
+      "copied": "Linkki kopioitu.",
+      "too-long": "Rata on liian suuri linkkijakoon.",
+      "failed": "Jakaminen ei onnistunut."
+    }
   },
   "piece": {
     "A2": { "name": "Suora 54 mm" },
