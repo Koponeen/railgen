@@ -4,6 +4,11 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "railgen",
   "compatibility_date": "2025-01-01",
+  // Cloudflaren build-pipeline ajaa suoraan "npx wrangler deploy" eikä
+  // npm run deploy -skriptiä, joten dist/ pitää syntyä tässä vaiheessa.
+  "build": {
+    "command": "npm run build"
+  },
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
