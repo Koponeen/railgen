@@ -156,6 +156,16 @@ Toinen lattiatesti nosti esiin, että koodi ei tuntenut radan **avoimia päitä*
 - Lisäksi valinnan mittasuhteet: zoomaus ei enää mene palan mittaan, ja päätykahvat ovat puolet entisestä.
 - **Commit**: `Continue from rail ends, make deletion final and offer a straight` ja `Branch from a run whose ends are rail ends`
 
+### Vaihe 8 — Yksi ehto ei riitä kolmelle napille *(Opus)*
+
+Kolmas lattiatesti. Neljä havaintoa, neljä eri syytä.
+
+- **Toimintorivi lukkiutui kokonaan.** Kaikki kolme nappia jakoivat ehdon `replaceable`, joten haaran omaava vaihde harmaannutti myös "Vaihtoehdot" — vaikka palan vaihto ei siirrä mitään. Napit saivat omat ehtonsa: vaihto ei vaadi mitään, piirto vaatii kiinteät päätyportit, poisto vain sen ettei valittuna ole koko rata.
+- **Poisto haaran alta.** Keskeltä lähtevä haara esti poiston. Nyt se ei estä: haara jää lattialle irralleen, kuten oikeastikin kävisi. Vaihdossa katkeava liitos pudotetaan kirjanpidosta (`jointHolds`), jottei kartta väitä kiinnitystä jota ei ole.
+- **Pitkä suora ilman vaihtoehtoja.** Kaksi syytä: täyttötaulukko kattoi vain 2160 mm, joten sitä pidempää väliä ei voinut täyttää lainkaan, ja loput karsi sivutila. Katto nostettiin, ja tilan puute kerrotaan nyt omana syynään.
+- **Kohtisuora haara sai mutkan.** `T` sai risteyksen sakon, vaikka se on yhden haaran vaihde. Sakko rajattiin aitoihin risteyksiin.
+- **Commit**: `Give each section action its own condition`
+
 Jokainen vaihe on itsenäisesti julkaistava, ja rata on joka välivaiheessa ehjä — epäonnistunut mutaatio tai sovitus ei koskaan jätä rikkinäistä tilaa näkyviin.
 
 ### Haiku — jatkuvat tehtävät

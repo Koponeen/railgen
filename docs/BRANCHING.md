@@ -106,6 +106,13 @@ Järjestys: **lähin haarakohta voittaa**. Tasapelin ratkaisee palan luonne, ja
 sekin datasta: `basic`-vaihde on halvin, risteys kalliimpi (se muuttaa radan
 luonnetta) ja harvinainen pala kalliimpi vielä.
 
+**T ei ole risteys.** Se sai aluksi saman sakon kuin `X`, koska molemmilla on
+`tee`/`star`-tagi — ja siksi kohtisuoraan piirretty haara sai vastaukseksi
+mutkan, vaikka juuri `T` tekee sen mitä pyydettiin. `T` on tavallinen yhden
+haaran vaihde, jonka haara vain kääntyy 90°; sakon ansaitsevat vain aidot
+risteykset (`crossing`) ja käyttämättä jäävät haaraportit. Nyt kohtisuora veto
+saa `T`:n kärkeen, ja sovituksen poikkeama ratkaisee lopun.
+
 ### Käyttämätön haaraportti maksaa
 
 Kolmisuuntainen vaihde (`I`/`J`) ja tähtiristeys (`X`) kelpaavat haarakohdaksi,

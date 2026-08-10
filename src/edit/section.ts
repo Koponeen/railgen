@@ -62,10 +62,20 @@ export interface Section {
   /** Osion jälkeinen pala, tai null jos ketju päättyy tähän. */
   after: number | null
   /**
-   * Voiko osion korvata piirtämällä? Haaroittuva osio (keskellä T-risteys),
-   * tasoa vaihtava osio ja koko radan kattava valinta eivät kelpaa.
+   * Voiko osion korvata piirtämällä? Korvaus kiinnittyy päätyportteihin ja
+   * kokoaa niiden väliin uuden ketjun, joten osiosta ulos johtavia liitoksia
+   * saa olla vain sen päissä, päiden on oltava samalla tasolla eikä valinta saa
+   * sulkeutua itseensä.
    */
   replaceable: boolean
+  /**
+   * Voiko osion poistaa? Poisto on löysempi ehto kuin korvaus: se ei kokoa
+   * mitään tilalle, joten keskeltä lähtevä haara ei ole este — se vain jää
+   * lattialle irralleen, aivan kuten oikeasti kävisi. Ainoa este on koko radan
+   * poistaminen: tyhjä rata ei ole rata, jonka kartta osaisi piirtää, ja pöydän
+   * tyhjentämiseen on oma nappinsa.
+   */
+  removable: boolean
 }
 
 /** Radan avoin pää: portti, johon ei ole liitetty mitään. */
@@ -106,6 +116,18 @@ export function freeEnds(track: TrackChain, library: PieceLibrary): FreeEnd[] {
   })
 
   return ends
+}
+
+/**
+ * Pitääkö liitos yhä? Palan vaihto voi viedä portin, johon jokin oli kiinni:
+ * kolmisuuntaisen vaihteen tilalle vaihdettu suora ei tarjoa haaraporttia, ja
+ * siihen liitetty haara jää lattialle irralleen. Liitos on kirjanpitoa, ja sen
+ * on vastattava sitä mitä lattialla on.
+ */
+export function jointHolds(pieces: readonly PlacedPiece[], library: PieceLibrary, a: number, b: number): boolean {
+  const left = placedPorts(pieces[a], library.get(pieces[a].pieceId))
+  const right = placedPorts(pieces[b], library.get(pieces[b].pieceId))
+  return left.some((port) => right.some((other) => Math.hypot(port.x - other.x, port.y - other.y) <= JOIN_EPS_MM))
 }
 
 /** Naapuriluettelo liitoksista: pala -> siihen liitetyt palat. */
@@ -203,9 +225,11 @@ export function makeSection(track: TrackChain, library: PieceLibrary, indices: r
 
   // Tasoa vaihtava osio (mäki) vaatisi ramppeja, joita sovitus ei sijoita;
   // itseensä sulkeutuvalla valinnalla ei ole päätyportteja mihin kiinnittyä.
-  const replaceable = branchFree && !cyclic && new Set(list).size === list.length && start.level === end.level
+  const unique = new Set(list).size === list.length
+  const replaceable = branchFree && !cyclic && unique && start.level === end.level
+  const removable = unique && list.length < track.pieces.length
 
-  return { indices: list, start, end, before, after, replaceable }
+  return { indices: list, start, end, before, after, replaceable, removable }
 }
 
 /**

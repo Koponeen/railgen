@@ -3,8 +3,8 @@ import { createInventory } from '../core/inventory'
 import { defaultLibrary } from '../core/library'
 import { entryFrame, exitFrame } from '../core/pieces'
 import { signaturesMatch } from '../core/ports'
-import { AREA, buildLoop } from './section.test'
-import { makeSection, naturalSection } from './section'
+import { AREA, buildChain, buildLoop } from './section.test'
+import { jointHolds, makeSection, naturalSection } from './section'
 import { swapOptions } from './swap'
 
 const library = defaultLibrary()
@@ -14,6 +14,38 @@ function sectionOf(track: ReturnType<typeof buildLoop>, indices: number[]) {
   if (!section) throw new Error('no section')
   return section
 }
+
+describe('swapping a piece something is attached to', () => {
+  it('offers a plain straight for a three-way switch: their main ports are the same', () => {
+    // Korvausluokka tulee pääporteista, joten kolmisuuntaisen vaihteen tilalle
+    // kelpaa suora. Haaraportti katoaa, ja siihen liitetty haara jää irralleen.
+    const track = buildChain([{ id: 'D' }, { id: 'I' }, { id: 'D' }])
+    const section = naturalSection(track, library, 1)
+    if (!section) throw new Error('no section')
+    const ids = swapOptions(track, section, { area: AREA }).map((option) => option.toId)
+    expect(ids).toContain('A')
+  })
+
+  it('drops the joint the swap breaks instead of keeping it in the books', () => {
+    // Haara on kiinni vaihteen haaraportissa. Suoralla ei ole sellaista, joten
+    // liitoksen on kadottava — kartta ei saa väittää kiinnitystä jota ei ole.
+    const track = buildChain([{ id: 'D' }, { id: 'I' }, { id: 'D' }])
+    const branched: typeof track = {
+      ...track,
+      pieces: [...track.pieces],
+      joints: [...track.joints],
+    }
+    const section = naturalSection(branched, library, 1)
+    if (!section) throw new Error('no section')
+
+    const swapped = swapOptions(branched, section, { area: AREA }).find((option) => option.toId === 'A')
+    if (!swapped) throw new Error('no straight swap')
+    // Jokainen jäljelle jäänyt liitos on aito porttipari.
+    for (const [a, b] of swapped.track.joints) {
+      expect(jointHolds(swapped.track.pieces, library, a, b)).toBe(true)
+    }
+  })
+})
 
 describe('swapOptions', () => {
   it('offers the same port signature, straight from the piece library', () => {

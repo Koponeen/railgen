@@ -79,7 +79,10 @@ describe('removeSection', () => {
     expect(openEnds).toHaveLength(2)
   })
 
-  it('refuses a section with a branch hanging off it', () => {
+  it('removes a switch even when a branch hangs off it, leaving the branch loose', () => {
+    // Poisto ei kokoa mitään tilalle, joten haara ei ole este: se jää lattialle
+    // irralleen, aivan kuten oikeasti kävisi. Palojen on lähdettävä radalta
+    // aina — muuten poistonappi ei poista mitään.
     const area = { kind: 'rect' as const, widthMm: 2400, depthMm: 1800 }
     const track = generate({ seed: 'A', area }).winner?.track
     if (!track) throw new Error('no track')
@@ -89,8 +92,13 @@ describe('removeSection', () => {
     if (!section) throw new Error('no section')
 
     const removed = removeSection(track, section, { area })
-    expect(removed.reason).toBe('section-not-removable')
-    expect(removed.track).toBeNull()
+    expect(removed.reason).toBe('ok')
+    expect(removed.track?.pieces.length).toBe(track.pieces.length - section.indices.length)
+    // Haaran palat ovat yhä kartalla, mutta poistetun palan liitokset ovat poissa.
+    for (const [a, b] of removed.track?.joints ?? []) {
+      expect(a).toBeLessThan(removed.track?.pieces.length ?? 0)
+      expect(b).toBeLessThan(removed.track?.pieces.length ?? 0)
+    }
   })
 
   it('refuses to remove the whole track', () => {

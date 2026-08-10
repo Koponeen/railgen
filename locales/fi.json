@@ -155,7 +155,8 @@
       "ends-beyond-budget": "Muoto ei ylety päätyportteihin. Kokeile loivempaa muotoa tai venytä valintaa kahvoista.",
       "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Piirrä loivempi muoto.",
       "self-collision": "Uusi osuus osuisi muuhun rataan. Piirrä se toiselle puolelle.",
-      "no-options": "Tälle osuudelle ei löytynyt vaihtoehtoja. Venytä valintaa kahvoista tai lisää paloja."
+      "no-options": "Tälle osuudelle ei löytynyt vaihtoehtoja. Venytä valintaa kahvoista tai lisää paloja.",
+      "no-room": "Radan vieressä ei ole tilaa kummallakaan puolella, ja lähes jokainen valmis kuvio tarvitsee sitä. Valitse osuus, jonka vierestä on tilaa, tai suurenna aluetta."
     }
   },
   "gap": {

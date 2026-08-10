@@ -85,6 +85,24 @@ Siitä seuraa yksi rehellinen rajoitus: aukon päiden on oltava samalla linjalla
 Mutkan yli venytetyn valinnan jälkeen ne eivät ole, ja Solver sanoo sen suoraan
 sen sijaan että arvaisi kaaria väliin. Piirtäminen tilalle toimii silloinkin.
 
+### Miksi pitkä suora jää usein ilman vaihtoehtoja
+
+Tyhjä vastaus ei yleensä johdu paloista vaan **tilasta**. Lähes jokainen kuvio
+tarvitsee tilaa radan viereen, ja lattian laitaan tai toisen raiteen viereen
+jäävällä osuudella sitä ei ole — sivutila mitataan sekä radan muihin paloihin
+että alueen reunaan. Rataa täynnä olevalla lattialla se on nolla melkein
+kaikkialla, ja silloin vain mäki (joka ei tarvitse sivutilaa) ja suoristus
+kelpaavat.
+
+Se on rehellinen rajoitus, mutta se pitää myös sanoa: kun vastaus on tyhjä ja
+sivutilaa on kummallakin puolella alle kapeimman kuvion tarpeen, statusrivi
+kertoo tilasta eikä paloista.
+
+Toinen, aiemmin näkymätön syy oli täyttötaulukon katto. Taulukko kattoi vain
+2160 mm, joten sitä pidemmän osuuden väliä ei voinut täyttää lainkaan — pitkä
+suora hylkäsi kaikki kuviot, ja valintaa piti lyhentää ennen kuin mitään
+tarjottiin. Katto on nyt olohuoneen lattian mitta.
+
 ## 3.5 Suoristus: yksinkertaisin vaihtoehto mutkalle
 
 Valmiit kuviot upotetaan **suoralle** osuudelle: kuvio korvaa osan siitä ja

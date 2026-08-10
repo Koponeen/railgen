@@ -7,7 +7,7 @@ import { areaBounds, buildMask, type AreaShape } from '../gen/mask'
 import { assembleTrack } from './assemble'
 import { swapPlacement } from './branch'
 import { availableExcluding } from './replace'
-import type { Section } from './section'
+import { jointHolds, type Section } from './section'
 
 // "Vaihda toiseen" (README luku 6): palan napautus tarjoaa saman
 // porttisignatuurin toteutukset. Lista ei ole koodissa vaan seuraa
@@ -71,7 +71,13 @@ export function swapOptions(track: Track, section: Section, options: SwapOptions
 
     const pieces: PlacedPiece[] = [...track.pieces]
     pieces[index] = swapped
-    const joints = track.joints.map(([a, b]) => [a, b] as [number, number])
+    // Vaihto voi viedä portin, johon jokin oli kiinni: kolmisuuntaisen vaihteen
+    // tilalle vaihdettu suora ei tarjoa haaraporttia. Silloin haara jää
+    // lattialle irralleen — se on vaihdon rehellinen hinta, mutta liitosta ei
+    // saa jäädä kirjanpitoon.
+    const joints = track.joints
+      .map(([a, b]) => [a, b] as [number, number])
+      .filter(([a, b]) => (a !== index && b !== index) || jointHolds(pieces, library, a, b))
 
     // Vaihto ei siirrä mitään, joten omaa päätyheittoa ei ole: liitokset ovat
     // samat kuin ennenkin ja niiden kuluma on jo koko radan raportissa.

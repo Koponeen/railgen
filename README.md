@@ -145,7 +145,7 @@ Säätökohteet: siksak-sakko (suunnanvaihdoista sakotetaan), 45°-lokerointi, t
 
 Pisteytys: monipuolisuus (uusi elementtityyppi = bonus), inventaario, joustobudjetti. Esitys: 2–4 haamuesikatselua + palamuutoskortti ("käyttää 1×L, 1×M · vapauttaa 1×D"). Valinnan venytys mutkien yli muuttaa päätysuuntia → radikaalimpia ehdotuksia.
 
-**Palan napautus** → "vaihda toiseen" -lista saman porttisignatuurin toteutuksista. **Poisto** radan keskeltä jättää aukkomerkin: jätä auki / täytä automaattisesti (Solver) / piirrä tilalle / kumoa. Radan päästä poisto toteutuu suoraan — siellä ei ole aukkoa vaan kiskonpää, joka siirtyy taaksepäin.
+**Palan napautus** → "vaihda toiseen" -lista saman porttisignatuurin toteutuksista; vaihto ei välitä siitä mitä palaan on kiinni, ja katkeava liitos katoaa kirjanpidosta. **Poisto** radan keskeltä jättää aukkomerkin: jätä auki / täytä automaattisesti (Solver) / piirrä tilalle / kumoa. Radan päästä poisto toteutuu suoraan — siellä ei ole aukkoa vaan kiskonpää, joka siirtyy taaksepäin. Poisto onnistuu myös haaran alta: haara jää lattialle irralleen, kuten oikeastikin kävisi.
 
 **Suoristus**: mutkittelevalle osuudelle, jonka päät ovat samalla linjalla, tarjotaan vaihtoehtona suora. Se on usein se mitä mutkalta haetaan, eikä sitä ole kuviokirjastossa.
 

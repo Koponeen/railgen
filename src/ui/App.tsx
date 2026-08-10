@@ -48,6 +48,12 @@ import {
 const PAGES = ['area', 'inventory', 'generate', 'result'] as const
 type PageId = (typeof PAGES)[number]
 
+/**
+ * Kapein valmis kuvio tarvitsee tämän verran tilaa radan viereen. Sitä
+ * kapeammalla osuudella tyhjä vastaus johtuu tilasta eikä paloista.
+ */
+const MIN_PATTERN_ROOM_MM = 99
+
 function randomSeed(): string {
   return seedToString(Math.floor(Math.random() * 0x100000000))
 }
@@ -219,7 +225,12 @@ export function App() {
     setRemoval(null)
     const options = solveSection(track, section.section, editOptions)
     if (options.length === 0) {
-      selectSection(section.section, { kind: 'no-options' })
+      // Yleisin syy tyhjään vastaukseen ei ole palojen puute vaan tila: lähes
+      // jokainen kuvio tarvitsee tilaa radan viereen, ja lattian laitaan tai
+      // toisen raiteen viereen jäävällä osuudella sitä ei ole. Se on rehellinen
+      // syy ja kerrotaan sellaisenaan.
+      const { leftMm, rightMm } = section.brief
+      selectSection(section.section, { kind: Math.max(leftMm, rightMm) < MIN_PATTERN_ROOM_MM ? 'no-room' : 'no-options' })
       return
     }
     setChoice(solveChoice(options))

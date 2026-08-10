@@ -157,6 +157,25 @@ eksplisiittinen ja lyhytikäinen tila kuin vapaassa piirrossa — yksi veto, ja
 kaksi sormea peruu ja navigoi. Kahvan päältä alkava veto on aina osion
 venytystä, ei kartan siirtoa.
 
+### Kolme toimintoa, kolme eri ehtoa
+
+Toimintorivin napit vaativat eri asioita, eivätkä ne siksi jaa yhtä ehtoa. Kun
+ne jakoivat, yksikin este lukitsi koko rivin: vaihteen napautus haaroineen
+harmaannutti myös "Vaihtoehdot", vaikka palan vaihto ei olisi siirtänyt mitään.
+
+| Nappi | Mitä se vaatii |
+|---|---|
+| **Vaihtoehdot** | ei mitään — vaihto ei siirrä mitään, ja tyhjä vastaus kerrotaan sanoin |
+| **Piirrä tilalle** | `replaceable`: kiinteät päätyportit, ei haaraa keskeltä, päät samalla tasolla |
+| **Poista** | `removable`: mitä tahansa paitsi koko rata |
+
+**Palan vaihto ei välitä siitä, mitä palaan on kiinni.** Korvausluokka tulee
+pääporteista, joten kolmisuuntaisen vaihteen tilalle kelpaa suora. Haaraportti
+katoaa vaihdossa, ja siihen liitetty haara jää lattialle irralleen — se on
+vaihdon rehellinen hinta. Liitosta ei kuitenkaan saa jäädä kirjanpitoon:
+`jointHolds` tarkistaa jokaisen vaihdon koskettaman liitoksen, ja katkennut
+pudotetaan. Kartta ei väitä kiinnitystä, jota ei ole.
+
 ### Poisto: radan keskeltä kysytään, päästä ei
 
 Poisto on kahta eri asiaa sen mukaan mihin se osuu.
@@ -167,6 +186,13 @@ täytä Solverilla, piirrä tilalle tai kumoa. "Jätä auki" on niistä
 lopputulos: avoin rata on rata siinä missä silmukkakin, ja ilman sitä
 poistosta ei koskaan tullut valmista — jokainen nappi vain palautti palat
 takaisin.
+
+Poiston ehto on korvausta löysempi: **keskeltä lähtevä haara ei estä poistoa.**
+Poisto ei kokoa mitään tilalle, joten haara vain jää lattialle irralleen —
+aivan kuten oikeasti kävisi, jos vetäisi palat pois sen alta. Palojen on
+lähdettävä radalta aina; muuten poistonappi ei poista mitään. Irralleen jäänyt
+osuus näkyy kartalla omana ketjunaan, ja sen saa kiinni piirtämällä sen päästä
+takaisin rataan (`docs/BRANCHING.md`).
 
 **Radan päästä** poisto toteutuu suoraan. Siellä ei ole aukkoa vaan kiskonpää,
 joka siirtyy taaksepäin, eikä siitä ole mitään kysyttävää. Osio tunnistetaan

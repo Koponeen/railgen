@@ -180,7 +180,12 @@ export function isBranchingPiece(piece: ResolvedPiece): boolean {
  */
 function junctionCost(piece: ResolvedPiece): number {
   let cost = piece.tags.includes('basic') ? 0 : 60
-  if (piece.tags.includes('tee') || piece.tags.includes('star') || piece.tags.includes('crossing')) cost += 200
+  // Risteys muuttaa radan luonnetta, ja käyttämättä jäävät haaraportit
+  // maksavat erikseen (`UNUSED_BRANCH_COST`). T-risteys ei kuulu kumpaankaan
+  // ryhmään: se on tavallinen yhden haaran vaihde, jonka haara vain kääntyy
+  // 90°. Kun se sai sakon risteyksenä, kohtisuoraan piirretty haara sai
+  // vastaukseksi mutkan — vaikka juuri T tekee sen mitä pyydettiin.
+  if (piece.tags.includes('crossing')) cost += 200
   if (piece.tags.includes('rare') || piece.tags.includes('retired')) cost += 150
   return cost
 }

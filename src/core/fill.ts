@@ -20,7 +20,14 @@ export interface FillTable {
   combos: FillCombo[][]
 }
 
-export const DEFAULT_MAX_FILL_MM = 2160
+/**
+ * Kuinka pitkän välin täyttötaulukko kattaa. Tätä pidempi osuus ei ole
+ * "täytettävissä" lainkaan, ja se näkyy suoraan käyttäjälle: pitkä suora ei
+ * kelvannut vaihteelle eikä kuviolle, vaan valintaa piti lyhentää ennen kuin
+ * vaihtoehtoja tarjottiin. Kymmenen solua ei siis riitä — olohuoneen lattian
+ * mitta riittää, ja taulukko rakentuu silti hetkessä (~360 riviä).
+ */
+export const DEFAULT_MAX_FILL_MM = 6480
 
 /**
  * Rakentaa täyttötaulukon. Yhdistelmät ovat kanonisia (laskeva järjestys), joten

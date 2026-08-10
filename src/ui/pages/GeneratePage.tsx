@@ -199,7 +199,11 @@ export function GeneratePage({
           <button type="button" class="action narrow" aria-label={t('section.clear')} onClick={() => onTapPiece(null)}>
             ✕
           </button>
-          <button type="button" class="action primary" disabled={!section.section.replaceable} onClick={onSolve}>
+          {/* Kolme toimintoa vaativat eri asioita, joten ne eivät jaa yhtä
+              ehtoa. Palan vaihto ei siirrä mitään eikä siksi vaadi mitään;
+              piirto tarvitsee kiinteät päätyportit; poisto ei kokoa mitään
+              tilalle, joten sitä estää vain koko radan valinta. */}
+          <button type="button" class="action primary" onClick={onSolve}>
             {t('section.options')}
           </button>
           <button
@@ -211,7 +215,7 @@ export function GeneratePage({
           >
             {drawMode ? t('draw.cancel') : t('section.draw')}
           </button>
-          <button type="button" class="action" disabled={!section.section.replaceable} onClick={onRemove}>
+          <button type="button" class="action" disabled={!section.section.removable} onClick={onRemove}>
             {t('section.remove')}
           </button>
         </ActionBar>
