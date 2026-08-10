@@ -51,7 +51,11 @@ export const QUICK_SIZES: { key: string; area: AreaShape }[] = [
 export const INVENTORY_PRESETS: { key: string; counts: Record<string, number> }[] = [
   { key: 'starter', counts: { A2: 2, A1: 2, A: 2, D: 2, E: 8 } },
   { key: 'medium', counts: { A2: 4, A1: 4, A: 4, D: 4, E: 12, E1: 4, L: 1, M: 1 } },
-  { key: 'big', counts: { A2: 8, A1: 6, A: 6, D: 8, E: 20, E1: 8, L: 2, M: 2, N: 2, DECK216: 1 } },
+  // Rampit ja kansi eivät yksin riitä mäkeen: laskeva ramppi kuljetaan
+  // yläpäästä sisään, joten mäki tarvitsee myös sukupuolenvaihtajat C2 ja B2
+  // (`data/elements/basic.json`). Ilman niitä tämä kokoelma sisältäisi mäen
+  // palat muttei osaisi rakentaa mäkeä.
+  { key: 'big', counts: { A2: 8, A1: 6, A: 6, D: 8, E: 20, E1: 8, L: 2, M: 2, N: 2, DECK216: 1, C2: 2, B2: 2 } },
 ]
 
 export function loadSettings(): AppSettings | null {

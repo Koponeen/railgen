@@ -11,7 +11,9 @@ import {
   toInventory,
   type AppSettings,
 } from './settings'
+import { Ledger, createInventory } from '../core/inventory'
 import { defaultLibrary } from '../core/library'
+import { buildElementLibrary, bundledElementSpecs } from '../gen/elements'
 import { buildShareUrl, deserializeSettings, readSharedSettings, serializeSettings, toBase64Url } from './share'
 import { ownablePieces, pieceGroups, sortForPartsList } from './pieceGroups'
 
@@ -79,6 +81,18 @@ describe('settings', () => {
       for (const id of Object.keys(preset.counts)) {
         expect(library.has(id), `${preset.key} references ${id}`).toBe(true)
       }
+    }
+  })
+
+  it('can build a hill out of every preset that stocks the ramps for one', () => {
+    // Laskeva ramppi kuljetaan yläpäästä sisään, joten mäki tarvitsee myös
+    // sukupuolenvaihtajat. Kokoelma, jossa on rampit ja kansi muttei niitä,
+    // sisältäisi mäen palat muttei osaisi rakentaa mäkeä.
+    for (const preset of INVENTORY_PRESETS) {
+      const stocksRamps = (preset.counts.N ?? 0) >= 2
+      if (!stocksRamps) continue
+      const elements = buildElementLibrary(bundledElementSpecs(), library, new Ledger(createInventory(preset.counts)))
+      expect(elements.byRole('hill').length, `${preset.key} builds a hill`).toBeGreaterThan(0)
     }
   })
 })
