@@ -179,6 +179,40 @@ tappiporttiin. BRIO ratkaisee saman asian samalla palalla. Sovituksen
 palavalikoimassa (`fit/beam.ts`) ei kuitenkaan ole sukupuolenvaihtajia, joten
 ketju ei voi päättyä toiseen parillisuuteen kuin mistä se lähti.
 
+#### Mitattu: kumpi variaatio, miten päin
+
+Osuuden liitinparillisuus on kiinteä, joten **jokainen vaihde mahtuu siihen
+tasan yhdessä asennossa** — ja haaraportin sukupuoli tulee palasta, ei
+asennosta. Suoralle osuudelle upotettuna (`insertIntoRun`):
+
+| Pala | Kulkusuunta joka kelpaa | Haaraportti |
+|---|---|---|
+| `L`, `M`, `O1`, `P1`, `T` | `in→out` | tappi |
+| `I` | `in→out` | kaksi tappia |
+| `J` | **`out→in`** | kaksi koloa |
+| `X` | `in→out` | pohjoinen kolo, etelä tappi |
+| `O`, `P` | — (E1-luokka, ei mahdu suoralle) | |
+
+Taulukko sanoo kaksi asiaa. Ensinnäkin **koneisto valitsee jo oikean variaation
+oikein päin**: `J` on `I`:n sukupuolikäännetty pari, ja se menee osuudelle
+nimenomaan toisin päin kuljettuna. Sukupuolenvaihtajaa ei tarvita siihen.
+
+Toiseksi rajoite on palavalikoimassa eikä logiikassa: **`L` ja `M` ovat
+peilipari, eivät sukupuolipari.** Kummallakin on kolo sisään ja tapit ulos,
+joten kumpaankaan ei voi saapua. Suoralle osuudelle mahtuvista vaihteista vain
+`J` ja `X` ottavat ketjun vastaan, ja kummallakin jää suunta yli.
+
+Kaksihaarainen vaihde johon voi saapua on olemassa — `P`, `O`:n
+sukupuolikäännetty pari — mutta se on E1-kaariluokan pala. Se tarjotaan siis
+vain kun haara päättyy kaaren kohdalle, ja silloin se toimii jo nyt.
+
+Kolme tapaa saada yhdistävä haara ilman roikkuvaa suuntaa, järjestyksessä:
+
+1. **Päätä haara kaaren kohdalle** → `P`. Toimii nyt.
+2. **Hyväksy `J`** ja käytä sen kolmas suunta sivuraiteena.
+3. **Sukupuolenvaihtaja ketjussa** → `L`/`M` kelpaa. Viimeinen keino, ei
+   ensimmäinen: oikea variaatio oikein päin on aina parempi vastaus.
+
 Kokeilin lisätä ne valikoimaan kalliina ja vain kiinnitetylle maalille:
 saapumisankkureiksi tulivat odotetusti `O1 P1 L M T J I X`, eli tavallinen
 kaksihaarainen vaihde kelpasi. Muutos kuitenkin **rikkoi yhdistävän haaran**
