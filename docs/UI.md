@@ -48,6 +48,21 @@ alalaidassa.
 Piirretty rata syrjäyttää generoidun, kunnes käyttäjä generoi uudelleen tai muuttaa
 asetuksia — molemmat elävät `App.tsx`:ssä rinnakkain, joten paluu on aina auki.
 
+### Tyhjennä
+
+Generoitu rata on hyvä lähtökohta, mutta se on myös este: radan vieressä alkava veto on
+aina haara (`docs/BRANCHING.md`), joten omaa rataa ei pääse piirtämään puhtaalta pöydältä
+ennen kuin generoitu on tieltä pois. Siksi toimintorivissä on **Tyhjennä**.
+
+Tyhjä pöytä on tila eikä tyhjä tulos: generoitua rataa ei poisteta vaan se jää siemenensä
+taakse, ja **Generoi** tuo sen takaisin. Sama malli kuin piirretyllä ja muokatulla radalla
+— paluu on aina auki. Tyhjällä pöydällä generointia ei myöskään ajeta turhaan, koska sen
+tulosta ei näytettäisi.
+
+Toimintorivi on nyt nelipaikkainen (Piirrä · Tyhjennä · Generoi · Tulos), mikä on
+puhelimen leveydellä maksimi: nimet on pidettävä yhden sanan mittaisina, ja siksi
+"Generoi uudelleen" lyheni muotoon "Generoi".
+
 ## Pyöritys on esitystason asia
 
 Pystyssä olevalla puhelimella vaakasuuntainen lattia jäisi kapeaksi kaistaleeksi ruudun

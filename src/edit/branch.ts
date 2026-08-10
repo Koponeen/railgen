@@ -11,7 +11,7 @@ import {
   type PlacedPiece,
   type ResolvedPiece,
 } from '../core/pieces'
-import { transformPort, type Port } from '../core/ports'
+import { complementOf, transformPort, type Port } from '../core/ports'
 import { makeRng } from '../core/rng'
 import { CELL_MM, EPS_MM } from '../core/units'
 import type { Vec } from '../core/vec'
@@ -49,6 +49,15 @@ const SWAP_EPS_MM = 0.2
 
 /** Näin monta lähintä palaa tutkitaan haarakohdan etsinnässä. */
 const MAX_NEAR_PIECES = 4
+
+/**
+ * Käyttämätön haaraportti maksaa. Kolmisuuntainen vaihde ja tähtiristeys
+ * kelpaavat haarakohdaksi, mutta yhtä haaraa varten ne jättävät radalle
+ * suunnan, joka ei johda mihinkään — lattialla se on irrallinen kiskonpää.
+ * Sakko ei sulje niitä pois: jos piirretty viiva vaatii 90°:n haaran, T on yhä
+ * ainoa pala joka sen tekee ja voittaa sakostaan huolimatta.
+ */
+const UNUSED_BRANCH_COST = 400
 
 /** Keskilinja näytteistetään tällä tiheydellä etäisyysmittausta varten. */
 const SAMPLE_STEP_MM = 20
@@ -116,6 +125,14 @@ export interface BranchOptions {
   snapMm?: number
   /** Montako haarakohtaa palautetaan sovitettavaksi. */
   limit?: number
+  /**
+   * Haetaanko porttia, johon ketju **päättyy**, sen sijaan että se lähtisi
+   * siitä? Yhdistävän haaran toinen pää on juuri tätä: ketju kulkee kolosta
+   * tappiin, joten se voi lähteä vain tappiportista ja päättyä vain
+   * koloporttiin. BRIO:ssa nämä ovat eri paloja (`L` vastaan `J`/`P`), ja juuri
+   * siksi haaran molempia päitä ei voi hakea samalla ehdolla.
+   */
+  arrival?: boolean
 }
 
 /**
@@ -124,12 +141,21 @@ export interface BranchOptions {
  * risteämän ratkaisu käyttää ne erikseen (crossing.ts).
  */
 export function branchingPieces(library: PieceLibrary): ResolvedPiece[] {
-  return library.pieces.filter(
-    (piece) =>
-      piece.ports.some((port) => port.branch) &&
-      !piece.isTerminal &&
-      !piece.tags.includes('unverified-geometry') &&
-      (piece.tags.includes('switch') || !piece.tags.includes('crossing')),
+  return library.pieces.filter(isBranchingPiece)
+}
+
+/**
+ * Kelpaako pala haarakohdaksi? Sama ehto sekä upotukselle että kaaren
+ * vaihdolle: puhdas risteys (H, H1, H2) ei ole vaihde vaan kaksi rataa
+ * päällekkäin, ja sen "haara" on läpimenevä toinen raide, jonka *molemmat* päät
+ * jäisivät ilmaan. Risteämän ratkaisu käyttää ne erikseen (crossing.ts).
+ */
+export function isBranchingPiece(piece: ResolvedPiece): boolean {
+  return (
+    piece.ports.some((port) => port.branch) &&
+    !piece.isTerminal &&
+    !piece.tags.includes('unverified-geometry') &&
+    (piece.tags.includes('switch') || !piece.tags.includes('crossing'))
   )
 }
 
@@ -197,6 +223,73 @@ function chooseOffset(
   return best
 }
 
+/**
+ * Osuuden päät, joiden liitinparillisuus poikkeaa täytön omasta.
+ *
+ * Täyttösuorat kulkevat aina kolosta tappiin, joten osuus, jonka pää on
+ * "väärin päin", ei täyty niillä lainkaan. Radalla sellaisia osuuksia on:
+ * mäkielementti kääntää parillisuuden ja palauttaa sen `C2`:lla ja `B2`:lla
+ * (docs/BRANCHING.md), joten mäen jälkeinen suora — usein radan pisin — alkaa
+ * sukupuolenvaihtajalla. Ilman tätä sellaiselle osuudelle ei mahdu yhtään
+ * vaihdetta, ja käyttäjä saa "vaihde ei mahdu" juuri siellä missä tilaa on
+ * eniten.
+ *
+ * Ratkaisu on sama kuin BRIO:lla itsellään: vaihtaja varataan osuuden päähän ja
+ * väli täytetään tavalliseen tapaan.
+ */
+interface ChangerEnds {
+  /** Osuuden alkuun tuleva vaihtaja, tai null jos parillisuus on jo oikea. */
+  leadId: string | null
+  /** Osuuden loppuun tuleva vaihtaja. */
+  trailId: string | null
+  leadMm: number
+  trailMm: number
+  /** Kehys, josta täyttö ja ydin alkavat: osuuden alku tai vaihtajan jälkeinen kohta. */
+  start: Frame
+}
+
+/** Kelpaako kehykseen tavallinen täyttösuora? */
+function fillerFits(library: PieceLibrary, frame: Frame): boolean {
+  return library.fillerStraights().some((piece) => placeAtFrame(piece, frame) !== null)
+}
+
+/** Sukupuolenvaihtajat lyhyimmästä alkaen; `straights()` on jo pituusjärjestyksessä. */
+function genderChangers(library: PieceLibrary): ResolvedPiece[] {
+  return library.straights().filter((piece) => piece.tags.includes('gender-changer'))
+}
+
+function changerEnds(library: PieceLibrary, section: Section): ChangerEnds | null {
+  let leadId: string | null = null
+  let leadMm = 0
+  let start = section.start
+
+  if (!fillerFits(library, section.start)) {
+    const lead = genderChangers(library)
+      .map((piece) => ({ piece, result: placeAtFrame(piece, section.start) }))
+      .find(({ result }) => result !== null && fillerFits(library, result.exit))
+    if (!lead || !lead.result) return null
+    leadId = lead.piece.id
+    leadMm = lead.piece.lengthMm
+    start = lead.result.exit
+  }
+
+  let trailId: string | null = null
+  let trailMm = 0
+  if (!fillerFits(library, section.end)) {
+    // Loppuvaihtaja sijoitetaan vasta täytön perään, mutta se on valittava jo
+    // nyt: sen pituus syö osuuden liikkumavaraa. Kelpoisuus kokeillaan
+    // parillisuudeltaan samasta kehyksestä johon täyttö päättyy.
+    const trail = genderChangers(library)
+      .map((piece) => ({ piece, result: placeAtFrame(piece, start) }))
+      .find(({ result }) => result !== null && result.exit.open === section.end.open)
+    if (!trail) return null
+    trailId = trail.piece.id
+    trailMm = trail.piece.lengthMm
+  }
+
+  return { leadId, trailId, leadMm, trailMm, start }
+}
+
 export interface RunInsertOptions {
   /** Mihin väliin ytimen ankkuri saa asettua osuudella. */
   range?: { minMm: number; maxMm: number }
@@ -227,13 +320,20 @@ export function insertIntoRun(
   if (!section.replaceable) return null
   const runMm = nominalLength(track, library, section.indices)
 
-  const probe = core(section.start)
+  // Osuuden päät voivat olla eri liitinparillisuudessa kuin täyttö (mäen
+  // jälkeinen B2/C2). Vaihtajat varataan ensin: ne syövät osuuden liikkumavaraa
+  // ja siirtävät ytimen aloituskehystä.
+  const ends = changerEnds(library, section)
+  if (!ends) return null
+  const { leadId, trailId, leadMm, trailMm, start } = ends
+
+  const probe = core(start)
   // Osuus on suora: ytimen on jatkettava samaan suuntaan samalla tasolla,
   // muuten se ei ole tämän osuuden korvaaja vaan uusi muoto.
-  if (!probe || probe.exit.dir !== section.start.dir || probe.exit.level !== section.start.level) return null
+  if (!probe || probe.exit.dir !== start.dir || probe.exit.level !== start.level) return null
 
-  const throughMm = Math.hypot(probe.exit.x - section.start.x, probe.exit.y - section.start.y)
-  const rawSlackMm = runMm - throughMm
+  const throughMm = Math.hypot(probe.exit.x - start.x, probe.exit.y - start.y)
+  const rawSlackMm = runMm - throughMm - leadMm - trailMm
   if (rawSlackMm < -EPS_MM) return null
 
   // Napsautettu täyttö jää vajaaksi tai menee yli; erotus näkyy suoraan
@@ -244,11 +344,17 @@ export function insertIntoRun(
 
   // Ydin liukuu osuudella, mutta sen sijainti mitataan sen omasta ankkurista:
   // risteyspalan on osuttava kohtaan, jossa piirretty viiva ylittää radan.
-  const alongMm = chooseOffset(table, slackMm, targetAlongMm, options.range)
+  // Etenemä mitataan osuuden alusta, joten aloitusvaihtaja siirtää sitä.
+  const range = options.range && { minMm: options.range.minMm - leadMm, maxMm: options.range.maxMm - leadMm }
+  const alongMm = chooseOffset(table, slackMm, targetAlongMm - leadMm, range)
   if (alongMm === null) return null
 
   const available = availableExcluding(track, new Set(section.indices), inventory)
-  return buildRun(track, library, available, section, core, probe, alongMm, slackMm - alongMm)
+  return buildRun(track, library, available, section, core, probe, alongMm, slackMm - alongMm, {
+    leadId,
+    trailId,
+    leadMm,
+  })
 }
 
 function buildRun(
@@ -260,12 +366,17 @@ function buildRun(
   probe: RunCoreResult,
   headMm: number,
   tailMm: number,
+  ends: { leadId: string | null; trailId: string | null; leadMm: number },
 ): RunInsertion | null {
   // Ydin varataan ennen täyttöjä: se on aina se harvinaisempi pala, ja täytön
-  // saa yleensä koottua siitä mitä jää jäljelle.
+  // saa yleensä koottua siitä mitä jää jäljelle. Sukupuolenvaihtaja on sekin
+  // pakollinen pala, joten se varataan samalla.
   const ledger = new Ledger(available)
   for (const placed of probe.placed) {
     if (!ledger.take(placed.pieceId)) return null
+  }
+  for (const id of [ends.leadId, ends.trailId]) {
+    if (id !== null && !ledger.take(id)) return null
   }
   const rng = makeRng(FILL_SEED)
   const head = solveFill(library, ledger, rng, { distanceMm: headMm })
@@ -289,6 +400,7 @@ function buildRun(
     return true
   }
 
+  if (ends.leadId !== null && !append(ends.leadId)) return null
   for (const id of head) if (!append(id)) return null
 
   const placedCore = core(cursor)
@@ -307,6 +419,7 @@ function buildRun(
   }
 
   for (const id of tail) if (!append(id)) return null
+  if (ends.trailId !== null && !append(ends.trailId)) return null
   if (replacement.length === 0) return null
 
   // Osuuden on päädyttävä samaan porttiin kuin ennenkin — suunta, taso ja
@@ -328,7 +441,7 @@ function buildRun(
     gapMm,
     added: countOf(replacement.map((placed) => placed.pieceId)),
     removed: countOf(section.indices.map((i) => track.pieces[i].pieceId)),
-    alongMm: headMm,
+    alongMm: ends.leadMm + headMm,
   }
 }
 
@@ -364,6 +477,16 @@ export function branchPortsOf(placed: PlacedPiece, piece: ResolvedPiece): Port[]
  */
 function canAttach(library: PieceLibrary, frame: Frame): boolean {
   return fitOptions(library).some((option) => placeAtFrame(option.piece, frame, { mirror: option.mirror }) !== null)
+}
+
+/**
+ * Voiko valmis ketju **päättyä** tähän porttiin? Ketju kulkee koko matkan
+ * kolosta tappiin, joten se päättyy tappiin ja kelpaa vain koloporttiin — eli
+ * täsmälleen niihin portteihin, joista se ei voisi lähteä. Kysymys esitetään
+ * samalle sovitukselle kuin lähtökin, vain parillisuus käännettynä.
+ */
+function canArrive(library: PieceLibrary, frame: Frame): boolean {
+  return canAttach(library, { ...frame, open: complementOf(frame.open) })
 }
 
 /** Avoin kehys portista: uusi ketju lähtee tästä ulospäin. */
@@ -422,6 +545,7 @@ export function branchAnchors(
   const snapMm = options.snapMm ?? BRANCH_SNAP_MM
   const candidates = branchingPieces(library)
   const neighbours = neighbourLists(track)
+  const usable = options.arrival ? canArrive : canAttach
   const anchors: BranchAnchor[] = []
   const runsDone = new Set<string>()
 
@@ -436,7 +560,7 @@ export function branchAnchors(
         const core = pieceCore(library, piece.id, order)
         const inserted = insertIntoRun(track, library, table, inventory, section, core, targetAlongMm)
         if (!inserted) continue
-        anchors.push(...anchorsFrom('run', library, inserted.pieces, inserted, piece, point))
+        anchors.push(...anchorsFrom('run', library, inserted.pieces, inserted, piece, point, usable))
         // Sukupuolitettu liitin kelpuuttaa vain toisen kulkusuunnan; jos
         // molemmat kelpaavat, ne ovat sama pala samassa paikassa.
         break
@@ -455,7 +579,7 @@ export function branchAnchors(
 
     // Kaari on jäykkä piste: vaihdetaan se haaroittavaan palaan, tai
     // haaroitetaan sitä ympäröiviltä suorilta (README luku 5).
-    anchors.push(...swapAnchors(track, library, inventory, hit.index, point))
+    anchors.push(...swapAnchors(track, library, inventory, hit.index, point, usable))
     for (const other of neighbours[hit.index]) {
       if (!isSoftPiece(library.get(track.pieces[other].pieceId))) continue
       addRun(naturalSection(track, library, other), hit.point)
@@ -482,10 +606,15 @@ function anchorsFrom(
   inserted: Omit<RunInsertion, 'pieces'>,
   piece: ResolvedPiece,
   point: Vec,
+  usable: (library: PieceLibrary, frame: Frame) => boolean,
 ): BranchAnchor[] {
-  return branchPortsOf(pieces[inserted.coreStart], piece)
+  const ports = branchPortsOf(pieces[inserted.coreStart], piece)
+  // Haara käyttää yhden portin; loput jäävät radalle irrallisiksi kiskonpäiksi.
+  const unusedCost = Math.max(0, ports.length - 1) * UNUSED_BRANCH_COST
+
+  return ports
     .map((port) => ({ port, frame: frameOfPort(port) }))
-    .filter(({ frame }) => canAttach(library, frame))
+    .filter(({ frame }) => usable(library, frame))
     .map(({ port, frame }) => {
       const offsetMm = Math.hypot(port.x - point.x, port.y - point.y)
       return {
@@ -501,7 +630,7 @@ function anchorsFrom(
         added: inserted.added,
         removed: inserted.removed,
         offsetMm,
-        cost: offsetMm + junctionCost(piece),
+        cost: offsetMm + junctionCost(piece) + unusedCost,
       }
     })
 }
@@ -517,6 +646,7 @@ export function swapAnchors(
   inventory: Inventory,
   index: number,
   point: Vec,
+  usable: (library: PieceLibrary, frame: Frame) => boolean = canAttach,
 ): BranchAnchor[] {
   const placed = track.pieces[index]
   const original = library.get(placed.pieceId)
@@ -526,8 +656,9 @@ export function swapAnchors(
   const anchors: BranchAnchor[] = []
 
   for (const piece of library.substitutesFor(original.id)) {
-    if (!piece.ports.some((port) => port.branch)) continue
-    if (piece.tags.includes('unverified-geometry')) continue
+    // Sama ehto kuin upotuksessa: puhdas risteys ei ole vaihde, ja sen tilalle
+    // vaihtaminen jättäisi radalle toisen raiteen molemmat päät ilmaan.
+    if (!isBranchingPiece(piece)) continue
     if (!available.unlimited && (available.counts[piece.id] ?? 0) < 1) continue
 
     const swapped = swapPlacement(piece, entry, exit)
@@ -551,6 +682,7 @@ export function swapAnchors(
         },
         piece,
         point,
+        usable,
       ),
     )
   }

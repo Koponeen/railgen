@@ -75,7 +75,9 @@
   },
   "generate": {
     "seed": "Siemen",
-    "regenerate": "Generoi uudelleen",
+    "generate": "Generoi",
+    "clear": "Tyhjennä",
+    "blank": "Tyhjä pöytä. Piirrä rata yhdellä sormella tai generoi uusi.",
     "showResult": "Tulos",
     "working": "Generoidaan…",
     "summary": "{pieces} palaa · {length} m · kireys {tightness}",
@@ -114,6 +116,8 @@
     "change": "käyttää {added}, vapauttaa {removed}",
     "option": {
       "plain": "Haara ({piece})",
+      "rejoin": "Yhdistävä haara ({piece}+{rejoin})",
+      "stub": "Haara ennen rataa ({piece})",
       "level": "Tasoristeys ({crossing})",
       "bridge": "Silta yli ({piece})"
     },
@@ -121,12 +125,12 @@
       "unknown": "Haaraa ei saatu rataan.",
       "drawing-too-short": "Viiva on liian lyhyt haaraksi. Piirrä pidempi.",
       "not-on-track": "Haara alkaa liian kaukaa radasta. Aloita veto radan vierestä.",
-      "no-branch-point": "Tähän kohtaan ei mahdu vaihdetta. Kokeile toista kohtaa tai lisää vaihteita palalistaan.",
+      "no-branch-point": "Radan tästä kohdasta ei löytynyt kohtaa, johon vaihde mahtuisi. Kokeile toista kohtaa tai lisää vaihteita palalistaan.",
       "no-fit": "Haaralle ei löytynyt palayhdistelmää. Kokeile loivempaa muotoa.",
       "ends-beyond-budget": "Vaihde ei mahdu tälle osuudelle. Kokeile toista kohtaa.",
       "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Piirrä loivempi muoto.",
       "self-collision": "Haara osuisi muuhun rataan. Piirrä se toiselle puolelle.",
-      "crossing-unresolved": "Haara ylittää radan kohdassa, johon ei saa risteystä eikä siltaa. Ylitä rata suoraan ja jätä ylityksen molemmin puolin suoraa."
+      "crossing-unresolved": "Haara ylittää radan kohdassa, johon ei saa risteystä eikä siltaa, eikä se mahdu pysähtymään ennen rataakaan. Ylitä rata suoraan ja jätä ylityksen molemmin puolin suoraa."
     }
   },
   "section": {

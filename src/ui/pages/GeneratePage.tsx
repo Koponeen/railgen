@@ -26,6 +26,8 @@ interface GeneratePageProps {
   library: PieceLibrary
   result: GenerateResult | null
   busy: boolean
+  /** Tyhjä pöytä: generoitua rataa ei näytetä, ja piirto alkaa puhtaalta. */
+  blank: boolean
   seedLabel: string
   /** Piirtotila päällä: yksi sormi piirtää, kaksi navigoi. */
   drawMode: boolean
@@ -56,6 +58,7 @@ interface GeneratePageProps {
   onUndoRemove: () => void
   onHandleMove: (handle: HandleId, point: Point) => void
   onSeedChange: (seed: string) => void
+  onClear: () => void
   onRegenerate: () => void
   onShowResult: () => void
 }
@@ -71,6 +74,7 @@ export function GeneratePage({
   library,
   result,
   busy,
+  blank,
   seedLabel,
   drawMode,
   drawing,
@@ -92,6 +96,7 @@ export function GeneratePage({
   onUndoRemove,
   onHandleMove,
   onSeedChange,
+  onClear,
   onRegenerate,
   onShowResult,
 }: GeneratePageProps) {
@@ -124,6 +129,7 @@ export function GeneratePage({
       <div class="map-status">
         <Status
           busy={busy}
+          blank={blank}
           drawing={drawing}
           edited={edited}
           result={result}
@@ -212,8 +218,15 @@ export function GeneratePage({
           >
             {drawMode ? t('draw.cancel') : t('draw.start')}
           </button>
+          {/* Tyhjällä pöydällä sama nappi tuo generoidun radan takaisin: se ei
+              kadonnut mihinkään, se on yhä siemenensä takana. */}
+          <button type="button" class="action" onClick={onClear} disabled={blank || !track}>
+            {t('generate.clear')}
+          </button>
+          {/* Neljä nappia mahtuu puhelimen leveyteen vain lyhyillä nimillä,
+              joten "Generoi" kertoo saman kuin "Generoi uudelleen". */}
           <button type="button" class="action primary" onClick={onRegenerate} disabled={busy}>
-            {t('generate.regenerate')}
+            {t('generate.generate')}
           </button>
           <button type="button" class="action" onClick={onShowResult} disabled={!track}>
             {t('generate.showResult')}
@@ -237,6 +250,7 @@ function badgeFor(section: SectionState | null, removal: RemovalState | null, tr
 
 interface StatusProps {
   busy: boolean
+  blank: boolean
   drawMode: boolean
   drawing: DrawingState | null
   edited: EditState | null
@@ -248,7 +262,7 @@ interface StatusProps {
 }
 
 /** Statusrivi kertoo aina mitä kartalla näkyy ja miksi — myös kun mikään ei onnistunut. */
-function Status({ busy, drawMode, drawing, edited, section, removal, choice, extendFailure, result }: StatusProps) {
+function Status({ busy, blank, drawMode, drawing, edited, section, removal, choice, extendFailure, result }: StatusProps) {
   // Haaraa kysytään piirron jälkeen, muut vaihtoehdot autosolverilta: sama
   // haamukuvio, mutta käyttäjä on kysynyt kahta eri asiaa.
   if (choice) return <span>{t(choice.options[0]?.kind === 'branch' ? 'branch.choose' : 'edit.choose')}</span>
@@ -295,6 +309,10 @@ function Status({ busy, drawMode, drawing, edited, section, removal, choice, ext
       </span>
     )
   }
+
+  // Tyhjä pöytä on tila eikä virhe: kartalla ei ole rataa, koska käyttäjä pyysi
+  // niin. Generoinnin epäonnistuminen on eri asia ja sanotaan erikseen.
+  if (blank) return <span>{t('generate.blank')}</span>
 
   const winner = result?.winner ?? null
   if (!winner) return <span class="warning">{describeFailure(result?.rejections ?? [])}</span>

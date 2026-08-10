@@ -1,8 +1,11 @@
+import { oppositeDir } from '../core/dir'
 import { inventoryFillTable, type FillTable } from '../core/fill'
 import { Ledger, createInventory, unlimitedInventory, type Inventory } from '../core/inventory'
 import { defaultLibrary, type PieceLibrary } from '../core/library'
 import { samplePath } from '../core/path'
 import { placedSegments, type Frame, type PlacedPiece } from '../core/pieces'
+import { complementOf } from '../core/ports'
+import { TRACK_WIDTH_MM } from '../core/units'
 import type { Vec } from '../core/vec'
 import type { FlexSettings, VarioSettings } from '../core/vario'
 import { beamFit, type BeamFit, type FitTuning } from '../fit/beam'
@@ -14,6 +17,7 @@ import { areaBounds, buildMask, type AreaShape } from '../gen/mask'
 import { assembleTrack, countUsage } from './assemble'
 import { branchAnchors, BRANCH_SNAP_MM, type BranchAnchor } from './branch'
 import { bridgeOver, findCrossings, levelCrossings, type CrossingSite } from './crossing'
+import { relaxSection } from './replace'
 import type { TrackChain } from './section'
 
 // Lisäävä piirto (README luku 5 "Haara mutkaan", luku 6 "risteämiskyselyt").
@@ -53,6 +57,18 @@ export interface ExtendOptions {
   maxOptions?: number
 }
 
+/**
+ * Millainen haara vaihtoehdosta tuli.
+ *
+ * - `plain` — vapaa pää, kuten sivuraide.
+ * - `rejoin` — molemmat päät radalla: vaihde myös toiseen päähän, ja haara on
+ *   aito ohituskaide eikä umpiperä. Tämä on vastaus siihen, että käyttäjä
+ *   piirsi viivan takaisin radalle asti.
+ * - `stub` — haara pysähtyy ennen rataa, koska ylitystä ei saatu ratkaistua.
+ *   Vajaa vastaus, mutta rehellinen ja parempi kuin pelkkä kieltäytyminen.
+ */
+export type BranchVariant = 'plain' | 'rejoin' | 'stub'
+
 /** Yksi tapa liittää piirretty haara rataan. */
 export interface BranchOption {
   track: Track
@@ -60,6 +76,9 @@ export interface BranchOption {
   junctionId: string
   /** Tuliko haara suoralle osuudelle vai kaaren tilalle? */
   kind: BranchAnchor['kind']
+  variant: BranchVariant
+  /** Haaran toisen pään vaihde, kun se yhdistyy takaisin rataan. */
+  rejoinId: string | null
   /** Miten risteämä ratkaistiin, jos sellainen tuli vastaan. */
   crossing: 'none' | 'level' | 'bridge'
   /** Risteyspalan tai siltaelementin tunnus. */
@@ -94,6 +113,34 @@ const MAX_ANCHORS = 6
 
 /** Näin monta keilahaun ketjua arvioidaan per haarakohta. */
 const MAX_FITS = 4
+
+/**
+ * Jos osoitetusta kohdasta ei löydy haarakohtaa, etsitään lähin mahdollinen
+ * tätä kertaa kauempaa (README luku 5: "Jos mikään ei kelpaa → syy + lähin
+ * mahdollinen haarakohta"). Haara ei silloin ala aivan sormen alta, mutta se on
+ * parempi vastaus kuin kieltäytyminen.
+ */
+const FALLBACK_SNAP_FACTOR = 3
+
+/** Näin monta haarakohtaa kokeillaan vedon toisesta päästä. */
+const MAX_REJOIN_ANCHORS = 4
+
+/**
+ * Yhdistävä haara maksaa oman haarakohtahakunsa vedon kummastakin päästä, joten
+ * sitä ei yritetä jokaisesta lähtökohdasta: halvimmat muutama riittävät, ja
+ * kartalle mahtuu joka tapauksessa kolme haamua.
+ */
+const MAX_REJOIN_STARTS = 3
+
+/**
+ * Yhdistävä haara maksaa kaksi vaihdetta, mutta se on juuri se mitä radalle
+ * asti piirretty viiva pyytää. Hyvitys pitää sen umpiperän edellä silloin kun
+ * kumpikin kelpaa.
+ */
+const REJOIN_BONUS = 900
+
+/** Kuinka kauas ennen rataa tynkähaara pysäytetään. */
+const STUB_CLEARANCE_MM = TRACK_WIDTH_MM * 3
 
 /** Voittaja on selvä, jos se on tämän verran halvempi kuin seuraava. */
 const AUTO_MARGIN = 0.7
@@ -151,8 +198,12 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
   if (!points) return failure('not-on-track')
 
   const table = inventoryFillTable(library, inventory)
-  const anchors = branchAnchors(track, library, table, inventory, points[0], { snapMm, limit: MAX_ANCHORS })
-  if (anchors.length === 0) return failure('no-branch-point')
+  // Osoitettuun kohtaan ei aina mahdu vaihdetta. Silloin etsitään lähin
+  // mahdollinen haarakohta kauempaa sen sijaan että kieltäydyttäisiin.
+  const anchors =
+    findAnchors(track, library, table, inventory, points[0], snapMm) ||
+    findAnchors(track, library, table, inventory, points[0], snapMm * FALLBACK_SNAP_FACTOR)
+  if (!anchors) return failure('no-branch-point')
 
   const context: Context = {
     track,
@@ -167,15 +218,22 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
   const built: BranchOption[] = []
   let firstReason: ExtendReason | null = null
 
-  for (const anchor of anchors) {
+  // Päättyykö veto radalle? Silloin käyttäjä ei piirtänyt umpiperää vaan
+  // yhdistävän haaran, ja vastaukseen kuuluu vaihde myös toiseen päähän.
+  const rejoins = distanceToTrack(points[points.length - 1], track, library) <= snapMm
+
+  for (const [index, anchor] of anchors.entries()) {
+    const before = built.length
+    if (rejoins && index < MAX_REJOIN_STARTS) built.push(...rejoinOptions(context, anchor, points, snapMm))
+
     const fits = fitLeg(context, anchor.pieces, anchor.frame, points, null)
     if (fits.length === 0) {
       firstReason ??= 'no-fit'
       continue
     }
 
-    let plain: BranchOption | null = null
-    for (const fit of fits.slice(0, MAX_FITS)) {
+    const attempts = fits.slice(0, MAX_FITS)
+    for (const fit of attempts) {
       const assembled = attach(context, anchor, [{ pieces: fit.pieces, from: anchor.junctionIndex }], {
         crossing: 'none',
         crossingId: null,
@@ -183,31 +241,39 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
         extraCost: fit.cost,
       })
       if (assembled.option) {
-        plain = assembled.option
+        built.push(assembled.option)
         break
       }
       firstReason ??= assembled.reason
     }
-    if (plain) {
-      built.push(plain)
+
+    // Ketju leikkaa vanhan radan: se on aito aikomus, ja siihen on kaksi
+    // vastausta (README luku 6). Kumpaakin tarjotaan omana vaihtoehtonaan —
+    // myös silloin kun rataa ennen pysähtyvä ketju jo kelpasi, koska
+    // lyhentäminen ei ole vastaus kysymykseen "yli vai poikki".
+    const crossing = firstCrossing(context, anchor, attempts)
+    if (!crossing) {
+      if (built.length === before) firstReason ??= 'no-fit'
       continue
     }
 
-    // Ketju leikkaa vanhan radan: se on aito aikomus, ja siihen on kaksi
-    // vastausta (README luku 6). Kumpaakin tarjotaan omana vaihtoehtonaan.
-    // Vain yksi risteämä kerrallaan: useampi ylitys yhdellä vedolla on
-    // kysymys, johon ei ole yhtä vastausta, ja se sanotaan suoraan.
-    const sites = findCrossings(anchor.pieces, fits[0].pieces, library, [[anchor.junctionIndex, 0]])
-    if (sites.length !== 1) {
-      if (sites.length > 1) firstReason = 'crossing-unresolved'
-      continue
+    // Vain yksi risteämä kerrallaan ratkaistaan: useampi ylitys yhdellä vedolla
+    // on kysymys, johon ei ole yhtä vastausta.
+    if (crossing.sites.length === 1) {
+      built.push(
+        ...levelOptions(context, anchor, points, crossing.sites[0]),
+        ...bridgeOptions(context, anchor, crossing.fit, crossing.sites[0]),
+      )
     }
-    const resolved = [
-      ...levelOptions(context, anchor, points, sites[0]),
-      ...bridgeOptions(context, anchor, fits[0], sites[0]),
-    ]
-    if (resolved.length === 0) firstReason = 'crossing-unresolved'
-    built.push(...resolved)
+
+    if (built.length > before) continue
+
+    // Kumpikaan vastaus ei mahdu. Tarjotaan edes haara, joka pysähtyy ennen
+    // rataa: vajaa vastaus on parempi kuin kieltäytyminen, ja käyttäjä näkee
+    // heti mihin asti hänen viivastaan tuli rataa.
+    const stub = stubOption(context, anchor, points, crossing.sites[0])
+    if (stub) built.push(stub)
+    else firstReason = 'crossing-unresolved'
   }
 
   if (built.length === 0) return failure(firstReason ?? 'no-fit')
@@ -279,6 +345,14 @@ function attach(
     base?: TrackChain
     gapMm?: number
     localJoints?: readonly [number, number][]
+    variant?: BranchVariant
+    rejoinId?: string | null
+    /**
+     * Kuuluvatko haaran omat liitokset päätyheiton kantajiin? Vapaapäisellä
+     * haaralla heittoa ei ole, mutta molemmista päistään kiinni olevalla on —
+     * ja se on syntynyt juuri näissä liitoksissa.
+     */
+    localiseLegs?: boolean
   },
 ): Attached {
   const { library, options } = context
@@ -288,6 +362,7 @@ function attach(
 
   const pieces: PlacedPiece[] = base.pieces.map((placed) => ({ ...placed, placement: { ...placed.placement } }))
   const joints: [number, number][] = base.joints.map(([a, b]) => [a, b])
+  const legJoints: [number, number][] = []
   let branchCount = 0
 
   for (const leg of legs) {
@@ -295,17 +370,18 @@ function attach(
     const first = pieces.length
     pieces.push(...leg.pieces.map((placed) => ({ ...placed, placement: { ...placed.placement } })))
     branchCount += leg.pieces.length
-    for (let i = first + 1; i < pieces.length; i += 1) joints.push([i - 1, i])
-    joints.push([leg.from, first])
-    if (leg.to !== undefined) joints.push([pieces.length - 1, leg.to])
+    for (let i = first + 1; i < pieces.length; i += 1) legJoints.push([i - 1, i])
+    legJoints.push([leg.from, first])
+    if (leg.to !== undefined) legJoints.push([pieces.length - 1, leg.to])
   }
   if (branchCount === 0) return { option: null, reason: 'no-fit' }
+  joints.push(...legJoints)
 
   // Haarakohdan päätyheitto kuuluu sen omalle osuudelle: se on syntynyt siinä
   // ja sen on mahduttava siihen (sama malli kuin osion korvauksessa).
   const assembled = assembleTrack(
     context.track,
-    { pieces, joints, localJoints, gapMm },
+    { pieces, joints, localJoints: meta.localiseLegs ? [...localJoints, ...legJoints] : localJoints, gapMm },
     { library, inventory: context.inventory, vario: options.vario, flex: options.flex, bounds: context.bounds },
   )
   const next = assembled.track
@@ -320,6 +396,8 @@ function attach(
       track: next,
       junctionId: anchor.junctionId,
       kind: anchor.kind,
+      variant: meta.variant ?? 'plain',
+      rejoinId: meta.rejoinId ?? null,
       crossing: meta.crossing,
       crossingId: meta.crossingId,
       addedIndices: newPieceIndices(context.track, next),
@@ -334,7 +412,144 @@ function attach(
   }
 }
 
+// --- Haarakohdan haku --------------------------------------------------------
+
+/** Haarakohdat annetulla nappausetäisyydellä, tai null jos niitä ei ole yhtään. */
+function findAnchors(
+  track: TrackChain,
+  library: PieceLibrary,
+  table: FillTable,
+  inventory: Inventory,
+  point: Vec,
+  snapMm: number,
+): BranchAnchor[] | null {
+  const anchors = branchAnchors(track, library, table, inventory, point, { snapMm, limit: MAX_ANCHORS })
+  return anchors.length > 0 ? anchors : null
+}
+
+// --- Yhdistävä haara ---------------------------------------------------------
+
+/**
+ * Haara, joka päättyy takaisin radalle. Toinen pää tarvitsee oman vaihteensa,
+ * ja ketju sovitetaan sen porttiin kiinnitettynä maalina — samalla tavalla kuin
+ * osion korvauksessa. Ilman tätä radalle asti piirretty viiva jättäisi kiskon
+ * pään lattialle kiinni toiseen rataan ilman liitosta, mikä näyttää kartalla
+ * yhtenäiseltä muttei ole sitä.
+ */
+function rejoinOptions(context: Context, anchor: BranchAnchor, points: readonly Vec[], snapMm: number): BranchOption[] {
+  const { library, table, inventory } = context
+  const base: TrackChain = { pieces: anchor.pieces, joints: anchor.joints }
+  const endPoint = points[points.length - 1]
+  const results: BranchOption[] = []
+
+  const ends = branchAnchors(base, library, table, inventory, endPoint, {
+    snapMm,
+    limit: MAX_REJOIN_ANCHORS,
+    arrival: true,
+  })
+
+  for (const end of ends) {
+    // Toisen vaihteen upotus järjesti palataulukon uusiksi; ensimmäinen vaihde
+    // etsitään sijainnistaan, ei indeksistään (sama syy kuin risteyksessä).
+    const junctionIndex = indexOfPlacement(end.pieces, anchor.pieces[anchor.junctionIndex])
+    if (junctionIndex === null) continue
+
+    const goal = arrivalAt(end.frame)
+    const fits = fitLeg(context, end.pieces, anchor.frame, points, goal)
+    if (fits.length === 0) continue
+
+    for (const fit of fits.slice(0, MAX_FITS)) {
+      // Ketjun pää jää maalista muutaman millin päähän; heitto jaetaan haaran
+      // omille liitoksille, jottei kumpikaan vaihde liiku.
+      const gap: Vec = { x: fit.end.x - goal.x, y: fit.end.y - goal.y }
+      const legPieces = fit.pieces.map((placed) => ({ ...placed, placement: { ...placed.placement } }))
+      relaxSection(legPieces, gap)
+
+      const attached = attach(context, anchor, [{ pieces: legPieces, from: junctionIndex, to: end.junctionIndex }], {
+        crossing: 'none',
+        crossingId: null,
+        variant: 'rejoin',
+        rejoinId: end.junctionId,
+        deviation: fit.deviation,
+        extraCost: fit.cost + end.cost - REJOIN_BONUS,
+        base: { pieces: end.pieces, joints: end.joints },
+        gapMm: anchor.gapMm + end.gapMm + Math.hypot(gap.x, gap.y),
+        localJoints: [...anchor.localJoints, ...end.localJoints],
+        localiseLegs: true,
+      })
+      if (!attached.option) continue
+      results.push({
+        ...attached.option,
+        added: mergeCounts(attached.option.added, end.added),
+        removed: mergeCounts(attached.option.removed, end.removed),
+      })
+      break
+    }
+  }
+  return results
+}
+
+/** Kehys, johon portin kautta saavutaan: ketjun on päätyttävä tähän. */
+function arrivalAt(frame: Frame): Frame {
+  return { ...frame, dir: oppositeDir(frame.dir), open: complementOf(frame.open) }
+}
+
 // --- Risteämän ratkaisu ------------------------------------------------------
+
+/** Ensimmäinen ketju, joka ylittää vanhan radan, ja sen ylitykset. */
+function firstCrossing(
+  context: Context,
+  anchor: BranchAnchor,
+  fits: readonly BeamFit[],
+): { fit: BeamFit; sites: CrossingSite[] } | null {
+  for (const fit of fits) {
+    const sites = findCrossings(anchor.pieces, fit.pieces, context.library, [[anchor.junctionIndex, 0]])
+    if (sites.length > 0) return { fit, sites }
+  }
+  return null
+}
+
+/**
+ * Haara, joka pysähtyy ennen rataa. Tämä on viimeinen vastaus siihen, että
+ * ylitykselle ei löydy risteystä eikä siltaa: viivasta toteutetaan se osa, joka
+ * on toteutettavissa, ja käyttäjä näkee kartalta mihin asti.
+ */
+function stubOption(context: Context, anchor: BranchAnchor, points: readonly Vec[], site: CrossingSite): BranchOption | null {
+  const head = trimBefore(points, site.point, STUB_CLEARANCE_MM)
+  if (!head) return null
+
+  for (const fit of fitLeg(context, anchor.pieces, anchor.frame, head, null).slice(0, MAX_FITS)) {
+    const attached = attach(context, anchor, [{ pieces: fit.pieces, from: anchor.junctionIndex }], {
+      crossing: 'none',
+      crossingId: null,
+      variant: 'stub',
+      deviation: fit.deviation,
+      extraCost: fit.cost,
+    })
+    if (attached.option) return attached.option
+  }
+  return null
+}
+
+/** Viiva katkaistuna annetun pisteen kohdalta, ja vielä `backMm` sitä ennen. */
+function trimBefore(points: readonly Vec[], at: Vec, backMm: number): Vec[] | null {
+  const head = splitAt(points, at).head
+  let remaining = backMm
+  const trimmed = [...head]
+  while (trimmed.length > 1 && remaining > 0) {
+    const last = trimmed[trimmed.length - 1]
+    const previous = trimmed[trimmed.length - 2]
+    const step = Math.hypot(last.x - previous.x, last.y - previous.y)
+    if (step > remaining) {
+      const t = (step - remaining) / step
+      trimmed[trimmed.length - 1] = { x: previous.x + (last.x - previous.x) * t, y: previous.y + (last.y - previous.y) * t }
+      return trimmed
+    }
+    trimmed.pop()
+    remaining -= step
+  }
+  return trimmed.length > 1 ? trimmed : null
+}
 
 /** Silta: uusi ketju nostetaan vanhan radan yli mäkielementillä. */
 function bridgeOptions(context: Context, anchor: BranchAnchor, fit: BeamFit, site: CrossingSite): BranchOption[] {
@@ -523,7 +738,7 @@ function rank(options: readonly BranchOption[], limit: number): BranchOption[] {
   return [...options]
     .sort((a, b) => a.cost - b.cost || a.junctionId.localeCompare(b.junctionId))
     .filter((option) => {
-      const key = `${option.junctionId}|${option.kind}|${option.crossing}|${option.crossingId ?? ''}`
+      const key = `${option.junctionId}|${option.kind}|${option.variant}|${option.rejoinId ?? ''}|${option.crossing}|${option.crossingId ?? ''}`
       if (seen.has(key)) return false
       seen.add(key)
       return true

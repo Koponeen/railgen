@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { buildFillTable, type FillTable } from '../core/fill'
 import { createInventory, unlimitedInventory } from '../core/inventory'
 import { defaultLibrary } from '../core/library'
-import { entryFrame, exitFrame, placedPorts } from '../core/pieces'
+import { entryFrame, exitFrame, placeAtFrame, placedPorts, startFrame, type PlacedPiece } from '../core/pieces'
 import { complementOf } from '../core/ports'
+import { evaluateClosure, jointsForChain } from '../core/vario'
 import type { Vec } from '../core/vec'
-import type { Track } from '../gen/build'
-import { buildLoop } from './section.test'
+import { summariseTrack, type Track } from '../gen/build'
+import { areaBounds, buildMask } from '../gen/mask'
+import { AREA, buildLoop } from './section.test'
 import { branchAnchors, branchingPieces, insertIntoRun, pieceCore, type BranchAnchor } from './branch'
 import { naturalSection } from './section'
 
@@ -21,6 +23,63 @@ function pointOnPiece(track: Track, index: number): Vec {
   const entry = entryFrame(placed, piece)
   const exit = exitFrame(placed, piece)
   return { x: (entry.x + exit.x) / 2, y: (entry.y + exit.y) / 2 }
+}
+
+/**
+ * Rata, jossa on mäki: ramppi ylös, kansi, `C2`, ramppi alas yläpäästä ja `B2`.
+ * Juuri tämä on se paikka, jossa radan liitinparillisuus vaihtuu — laskeva
+ * ramppi kuljetaan yläpäästä sisään (`data/elements/basic.json`).
+ */
+function hillTrack(): Track {
+  const steps: { id: string; reverse?: boolean }[] = [
+    { id: 'D' },
+    { id: 'N' },
+    { id: 'DECK216' },
+    { id: 'C2' },
+    { id: 'N', reverse: true },
+    { id: 'B2' },
+    { id: 'D' },
+    { id: 'D' },
+    { id: 'D' },
+    { id: 'D' },
+    { id: 'E' },
+    { id: 'E' },
+  ]
+
+  let cursor = startFrame(500, 500, 0, 0, 'pin')
+  const pieces: PlacedPiece[] = []
+  for (const step of steps) {
+    const piece = library.get(step.id)
+    const [first, second] = piece.mainPorts
+    const result = placeAtFrame(piece, cursor, {
+      entryPortId: step.reverse ? second.id : first.id,
+      exitPortId: step.reverse ? first.id : second.id,
+    })
+    if (!result) throw new Error(`could not place ${step.id}`)
+    pieces.push(result.placed)
+    cursor = result.exit
+  }
+
+  const joints: [number, number][] = []
+  for (let i = 1; i < pieces.length; i += 1) joints.push([i - 1, i])
+
+  const usage: Record<string, number> = {}
+  for (const placed of pieces) usage[placed.pieceId] = (usage[placed.pieceId] ?? 0) + 1
+
+  return summariseTrack(
+    {
+      pieces,
+      joints,
+      closure: evaluateClosure(jointsForChain(pieces.map((placed) => library.get(placed.pieceId)), false), {
+        gapMm: 0,
+        angleDeg: 0,
+      }),
+      usage,
+      shortages: {},
+      areaBounds: areaBounds(buildMask(AREA)),
+    },
+    library,
+  )
 }
 
 /** Radan nimellispituus: haaran lisääminen ei saa muuttaa sitä muualta kuin haaran osalta. */
@@ -126,6 +185,68 @@ describe('insertIntoRun', () => {
   })
 })
 
+describe('insertIntoRun across a gender change', () => {
+  /**
+   * Mäkielementti kääntää liittimen sukupuolen ja palauttaa sen `C2`:lla ja
+   * `B2`:lla, joten mäen jälkeinen suora — usein radan pisin — alkaa "väärässä"
+   * parillisuudessa. Täyttösuorat kulkevat aina kolosta tappiin, joten ilman
+   * vaihtajaa sille osuudelle ei mahtuisi yhtään vaihdetta, ja käyttäjä saisi
+   * "vaihde ei mahdu" juuri siellä missä tilaa on eniten.
+   */
+  const HILL_RUN = hillTrack()
+  /** Osuus mäen jälkeen: alkaa `B2`:lla, joten sen parillisuus vaihtuu. */
+  const AFTER_HILL = 5
+
+  it('has a run whose connector parity really does flip', () => {
+    const section = naturalSection(HILL_RUN, library, AFTER_HILL)
+    if (!section) throw new Error('no section')
+    expect(HILL_RUN.pieces[AFTER_HILL].pieceId).toBe('B2')
+    expect(section.start.open).not.toBe(section.end.open)
+  })
+
+  it('takes a switch there', () => {
+    const section = naturalSection(HILL_RUN, library, AFTER_HILL)
+    if (!section) throw new Error('no section')
+
+    const inserted = insertIntoRun(
+      HILL_RUN,
+      library,
+      table,
+      unlimitedInventory(),
+      section,
+      pieceCore(library, 'L', { entryPortId: 'in', exitPortId: 'out' }),
+      300,
+    )
+    if (!inserted) throw new Error('no insertion')
+    expect(inserted.pieces[inserted.coreStart].pieceId).toBe('L')
+    // Vaihtaja on yhä mukana: parillisuus palautetaan, ei ohiteta.
+    expect(inserted.added.B2).toBeGreaterThanOrEqual(1)
+  })
+
+  it('keeps such a run exactly as long as it was', () => {
+    const section = naturalSection(HILL_RUN, library, AFTER_HILL)
+    if (!section) throw new Error('no section')
+    const inserted = insertIntoRun(
+      HILL_RUN,
+      library,
+      table,
+      unlimitedInventory(),
+      section,
+      pieceCore(library, 'L', { entryPortId: 'in', exitPortId: 'out' }),
+      300,
+    )
+    if (!inserted) throw new Error('no insertion')
+    const before = HILL_RUN.pieces.reduce((sum, placed) => sum + library.get(placed.pieceId).lengthMm, 0)
+    const after = inserted.pieces.reduce((sum, placed) => sum + library.get(placed.pieceId).lengthMm, 0)
+    expect(after).toBeCloseTo(before, 6)
+  })
+
+  it('finds a branch point there too', () => {
+    const anchors = branchAnchors(HILL_RUN, library, table, unlimitedInventory(), pointOnPiece(HILL_RUN, AFTER_HILL + 2))
+    expect(anchors.length).toBeGreaterThan(0)
+  })
+})
+
 describe('branchAnchors', () => {
   it('finds branch points on a straight run', () => {
     const track = buildLoop()
@@ -223,5 +344,52 @@ describe('branchAnchors', () => {
     branchAnchors(track, library, table, unlimitedInventory(), pointOnPiece(track, 1))
     expect(loopLength(track)).toBe(before)
     expect(track.pieces).toHaveLength(24)
+  })
+
+  it('prefers a switch that leaves no direction hanging', () => {
+    // Kolmisuuntainen vaihde ja tähtiristeys kelpaavat, mutta yhtä haaraa
+    // varten ne jättävät radalle kiskonpään joka ei johda mihinkään.
+    const track = buildLoop()
+    const anchors = branchAnchors(track, library, table, unlimitedInventory(), pointOnPiece(track, 1))
+    const rank = (id: string): number => anchors.findIndex((anchor) => anchor.junctionId === id)
+    expect(rank('L')).toBeGreaterThanOrEqual(0)
+    expect(rank('I')).toBeGreaterThan(rank('L'))
+    if (rank('X') >= 0) expect(rank('X')).toBeGreaterThan(rank('L'))
+  })
+
+  it('never swaps a curve for a plain crossing: both ends of its second track would hang', () => {
+    const track = buildLoop(['E1', 'E1', 'E1', 'E1', 'E1', 'E1', 'E1', 'E1'])
+    const anchors = branchAnchors(track, library, table, unlimitedInventory(), pointOnPiece(track, 0))
+    for (const anchor of anchors) {
+      const tags = library.get(anchor.junctionId).tags
+      expect(tags.includes('crossing') && !tags.includes('switch')).toBe(false)
+    }
+  })
+})
+
+describe('branchAnchors in arrival mode', () => {
+  it('offers ports a finished chain can end at, not ones it can start from', () => {
+    // Ketju kulkee koko matkan kolosta tappiin: se lähtee tappiportista ja
+    // päättyy koloporttiin. BRIO:ssa nämä ovat eri paloja (L vastaan J/P).
+    const track = buildLoop()
+    const arrivals = branchAnchors(track, library, table, unlimitedInventory(), pointOnPiece(track, 1), {
+      arrival: true,
+    })
+    expect(arrivals.length).toBeGreaterThan(0)
+    for (const anchor of arrivals) {
+      expect(anchor.frame.open).toBe('socket')
+    }
+  })
+
+  it('picks up exactly the pieces whose branch port is a socket', () => {
+    const track = buildLoop()
+    const ids = new Set(
+      branchAnchors(track, library, table, unlimitedInventory(), pointOnPiece(track, 1), { arrival: true }).map(
+        (anchor) => anchor.junctionId,
+      ),
+    )
+    expect(ids).toContain('J')
+    expect(ids).not.toContain('L')
+    expect(ids).not.toContain('M')
   })
 })

@@ -90,6 +90,12 @@ export function App() {
   /** Poistettu osio odottamassa täyttöä, piirtoa tai kumoamista. */
   const [removal, setRemoval] = useState<RemovalState | null>(null)
   const [extendFailure, setExtendFailure] = useState<ExtendReason | null>(null)
+  /**
+   * Tyhjä pöytä: generoitu rata on olemassa mutta se on siirretty syrjään, jotta
+   * käyttäjä voi piirtää puhtaalta pöydältä. "Generoi" tuo sen takaisin, joten
+   * paluu on aina auki — sama malli kuin piirretyllä ja muokatulla radalla.
+   */
+  const [blank, setBlank] = useState(false)
 
   useEffect(() => {
     saveSettings({ ...settings, seed })
@@ -118,13 +124,15 @@ export function App() {
   )
 
   // Rata generoidaan uudelleen aina kun asetukset tai siemen muuttuvat, mutta
-  // vain kun sitä ollaan katsomassa.
+  // vain kun sitä ollaan katsomassa — eikä lainkaan tyhjällä pöydällä, jossa
+  // generoitua rataa ei näytetä.
   useEffect(() => {
-    if (page === 'generate' || page === 'result') run(seed)
-  }, [page, seed, run])
+    if (!blank && (page === 'generate' || page === 'result')) run(seed)
+  }, [page, seed, run, blank])
 
   const winner = result?.winner ?? null
-  const track = edited?.track ?? drawing?.result.track ?? winner?.track ?? null
+  const generated = blank ? null : winner?.track ?? null
+  const track = edited?.track ?? drawing?.result.track ?? generated
 
   /** Muokkauksen asetukset yhdestä paikasta: sama kokoelma joka koneistolle. */
   const editOptions = useMemo(
@@ -325,12 +333,23 @@ export function App() {
 
   const patch = (next: Partial<AppSettings>) => {
     resetEdits()
+    setBlank(false)
     setSettings((current) => ({ ...current, ...next }))
   }
 
   const startOver = (nextSeed: string) => {
     resetEdits()
+    setBlank(false)
     setSeed(nextSeed)
+  }
+
+  /**
+   * "Tyhjennä": piirto alkaa puhtaalta pöydältä. Generoitu rata ei katoa vaan
+   * jää siemenensä taakse, joten "Generoi" tuo sen takaisin.
+   */
+  const clearBoard = () => {
+    resetEdits()
+    setBlank(true)
   }
 
   const seedLabel = useMemo(() => seedToString(seedFromInput(seed)), [seed])
@@ -344,8 +363,9 @@ export function App() {
           <GeneratePage
             area={settings.area}
             library={library}
-            result={result}
-            busy={busy}
+            result={blank ? null : result}
+            blank={blank}
+            busy={busy && !blank}
             seedLabel={seed}
             drawMode={drawMode}
             drawing={drawing}
@@ -367,7 +387,8 @@ export function App() {
             onUndoRemove={() => setRemoval(null)}
             onHandleMove={handleHandleMove}
             onSeedChange={startOver}
-            onRegenerate={() => startOver(randomSeed())}
+            onClear={clearBoard}
+            onRegenerate={() => (blank ? setBlank(false) : startOver(randomSeed()))}
             onShowResult={() => setPage('result')}
           />
         ) : null}

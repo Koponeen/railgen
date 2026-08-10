@@ -209,6 +209,24 @@ describe('extendTrack across the track', () => {
     }
   })
 
+  it('stops the branch before the track rather than refusing, when neither answer fits', () => {
+    // Kokoelmassa on vaihteita muttei risteyspaloja eikä ramppeja: tasoristeys
+    // ja silta ovat kumpikin poissa laskuista. Vedosta toteutetaan silti se osa,
+    // joka on toteutettavissa.
+    const track = buildLoop()
+    const result = extendTrack(track, crossingBranch(track), {
+      area: AREA,
+      inventory: createInventory({ D: 40, A: 8, A1: 8, A2: 8, E: 20, E1: 8, L: 2, M: 2 }),
+      maxOptions: 4,
+    })
+
+    expect(result.reason).toBe('ok')
+    expect(result.options.length).toBeGreaterThan(0)
+    expect(result.options.every((option) => option.crossing === 'none')).toBe(true)
+    expect(result.options.some((option) => option.variant === 'stub')).toBe(true)
+    for (const option of result.options) expectIntact(track, option)
+  })
+
   it('keeps the branch connected end to end through the crossing', () => {
     const track = buildLoop()
     const level = extendTrack(track, crossingBranch(track), { area: AREA, maxOptions: 4 }).options.find(
@@ -226,6 +244,78 @@ describe('extendTrack across the track', () => {
     for (const index of level.addedIndices) {
       expect(degree.get(index) ?? 0).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('extendTrack back onto the track', () => {
+  /**
+   * Veto, joka lähtee radalta ja palaa radalle. Ilman kummankin pään vaihdetta
+   * viiva vain päättyisi toisen radan viereen ilman liitosta: kartalla se
+   * näyttäisi yhtenäiseltä, mutta lattialla siinä ei olisi kiinnitystä.
+   */
+  function loopBranch(track: Track): Vec[] {
+    const from = midOf(track, 1)
+    const to = midOf(track, 3)
+    const out = { x: from.x, y: from.y - 500 }
+    const along = { x: to.x, y: to.y - 500 }
+    return [...stroke(from, out, 10), ...stroke(out, along, 20), ...stroke(along, to, 10)]
+  }
+
+  function midOf(track: Track, index: number): Vec {
+    const placed = track.pieces[index]
+    const piece = library.get(placed.pieceId)
+    const entry = entryFrame(placed, piece)
+    const exit = exitFrame(placed, piece)
+    return { x: (entry.x + exit.x) / 2, y: (entry.y + exit.y) / 2 }
+  }
+
+  /** Palan liitosten määrä radalla. */
+  function degreeOf(track: Track, index: number): number {
+    return track.joints.filter(([a, b]) => a === index || b === index).length
+  }
+
+  it('offers a branch with a switch at both ends', () => {
+    const track = buildLoop()
+    const result = extendTrack(track, loopBranch(track), { area: AREA, maxOptions: 4 })
+
+    expect(result.reason).toBe('ok')
+    const rejoin = result.options.find((option) => option.variant === 'rejoin')
+    if (!rejoin) throw new Error('no rejoining branch')
+    expect(rejoin.rejoinId).not.toBeNull()
+    expect(rejoin.added[rejoin.junctionId]).toBeGreaterThanOrEqual(1)
+    expect(rejoin.added[rejoin.rejoinId as string]).toBeGreaterThanOrEqual(1)
+  })
+
+  it('really joins it: no piece of the branch is left hanging', () => {
+    const track = buildLoop()
+    const rejoin = extendTrack(track, loopBranch(track), { area: AREA, maxOptions: 4 }).options.find(
+      (option) => option.variant === 'rejoin',
+    )
+    if (!rejoin) throw new Error('no rejoining branch')
+
+    // Haaran ketju on radan lopussa: jokaisella palalla on liitos, ja ketjun
+    // molemmat päät ovat kiinni kahdessa palassa — vapaata päätä ei ole.
+    const last = rejoin.track.pieces.length - 1
+    const first = last - rejoin.pieceCount + 1
+    for (let index = first; index <= last; index += 1) {
+      expect(degreeOf(rejoin.track, index)).toBeGreaterThanOrEqual(2)
+    }
+    expectIntact(track, rejoin)
+  })
+
+  it('asks instead of deciding: an open-ended branch is a different answer', () => {
+    const track = buildLoop()
+    const result = extendTrack(track, loopBranch(track), { area: AREA, maxOptions: 4 })
+    // Vapaapäinen haara samasta vedosta on oma vaihtoehtonsa, joten valinta jää
+    // käyttäjälle eikä sitä ratkaista puolesta.
+    expect(result.options.length).toBeGreaterThan(1)
+  })
+
+  it('leaves the original track untouched', () => {
+    const track = buildLoop()
+    const pieces = track.pieces.length
+    extendTrack(track, loopBranch(track), { area: AREA })
+    expect(track.pieces).toHaveLength(pieces)
   })
 })
 

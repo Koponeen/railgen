@@ -75,7 +75,9 @@
   },
   "generate": {
     "seed": "Seed",
-    "regenerate": "Generate again",
+    "generate": "Generate",
+    "clear": "Clear",
+    "blank": "Empty floor. Draw a track with one finger, or generate one.",
     "showResult": "Result",
     "working": "Generating…",
     "summary": "{pieces} pieces · {length} m · tightness {tightness}",
@@ -114,6 +116,8 @@
     "change": "uses {added}, frees {removed}",
     "option": {
       "plain": "Branch ({piece})",
+      "rejoin": "Connecting branch ({piece}+{rejoin})",
+      "stub": "Branch stopping short ({piece})",
       "level": "Level crossing ({crossing})",
       "bridge": "Bridge over ({piece})"
     },
@@ -121,12 +125,12 @@
       "unknown": "The branch could not be added.",
       "drawing-too-short": "That stroke is too short for a branch. Draw a longer one.",
       "not-on-track": "The branch starts too far from the track. Start the stroke next to it.",
-      "no-branch-point": "No switch fits here. Try another spot, or add switches to your pieces.",
+      "no-branch-point": "No spot near here takes a switch. Try another place along the track, or add switches to your pieces.",
       "no-fit": "No combination of pieces follows that branch. Try a gentler shape.",
       "ends-beyond-budget": "The switch does not fit on this run. Try another spot.",
       "joint-over-safety-cap": "One joint would end up too sharp. Draw a gentler shape.",
       "self-collision": "The branch would hit the rest of the track. Draw it on the other side.",
-      "crossing-unresolved": "The branch crosses the track where neither a crossing nor a bridge fits. Cross it head-on and leave straight track on both sides of the crossing."
+      "crossing-unresolved": "The branch crosses the track where neither a crossing nor a bridge fits, and it has no room to stop short either. Cross the track head-on and leave straight track on both sides of the crossing."
     }
   },
   "section": {

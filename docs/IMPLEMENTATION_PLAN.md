@@ -135,6 +135,16 @@ README §10 kohta 0: "jos tämä ei tunnu hyvältä, mikään ei pelasta."
 - **Commit**: `Add swap, delete and autosolver variations`
 - **Toteutettu**: kuviot ovat dataa (`data/variations/`) ja niiden vaatimukset mitataan geometriasta, ei kirjoiteta dataan. Kaikki muokkaukset kokoavat radan samasta paikasta (`assemble.ts`), ja upotus-ja-täytä -koneisto on yhteinen vaihteen, risteyksen, sillan ja kuvion kesken. Ks. `docs/VARIATIONS.md`.
 
+### Vaihe 6 — Haarapiirto lattiatestin jälkeen *(Opus)*
+
+Ensimmäinen käyttökerta oikealla radalla nosti esiin kolme asiaa, jotka spesifikaatio lupasi muttei toteutus antanut.
+
+- **Tyhjennä.** Generoitu rata esti oman radan piirtämisen: radan vierestä alkava veto on aina haara. Tyhjä pöytä on nyt oma tilansa, ja generoitu rata jää siemenensä taakse.
+- **Yhdistävä haara.** Radalle asti piirretty viiva jäi kiinni vain toisesta päästään. Toinen pää saa nyt oman vaihteensa; palojen liitinsukupuoli ratkaisee kumman pään palat kelpaavat (`L`/`M`/`T` lähtöön, `J`/`P` päätökseen).
+- **"Vaihde ei mahdu" siellä missä tilaa on eniten.** Mäkielementti kääntää liitinparillisuuden, joten mäen jälkeiselle suoralle ei mahtunut yhtään vaihdetta. Sukupuolenvaihtaja varataan nyt osuuden päähän samalla tavalla kuin BRIO:ssa itsessään.
+- Lisäksi: käyttämätön haaraportti maksaa (kolmisuuntainen vaihde ei enää jätä irrallista kiskonpäätä kevyesti), risteämä tarjotaan myös lyhyemmän haaran rinnalla, haarakohtaa haetaan kauempaa jos osoitettuun kohtaan ei mahdu, ja ratkaisemattomasta ylityksestä tarjotaan tynkä kieltäytymisen sijaan.
+- **Commit**: `Fix branch drawing: clear board, connecting branches and gender-changing runs`
+
 Jokainen vaihe on itsenäisesti julkaistava, ja rata on joka välivaiheessa ehjä — epäonnistunut mutaatio tai sovitus ei koskaan jätä rikkinäistä tilaa näkyviin.
 
 ### Haiku — jatkuvat tehtävät

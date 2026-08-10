@@ -250,10 +250,21 @@ export function describeExtendFailure(reason: ExtendReason): string {
   return KNOWN_EXTEND_REASONS.has(reason) ? t(`branch.failure.${reason}`) : t('branch.failure.unknown')
 }
 
-/** Vaihtoehdon nimilappu: haarapala ja risteämän ratkaisu lyhyesti. */
+/**
+ * Vaihtoehdon nimilappu. Risteämän ratkaisu kertoo itsestään eniten, joten se
+ * voittaa nimessä; muuten kerrotaan millainen haara on kyseessä. Erot ovat
+ * käyttäjälle olennaisia: yhdistävä haara on ohituskaide, tynkä pysähtyy ennen
+ * rataa, ja tavallisella on vapaa pää.
+ */
 export function describeBranchOption(option: BranchOption): string {
-  if (option.crossing === 'none') return t('branch.option.plain', { piece: option.junctionId })
-  return t(`branch.option.${option.crossing}`, { piece: option.junctionId, crossing: option.crossingId ?? '' })
+  if (option.crossing !== 'none') {
+    return t(`branch.option.${option.crossing}`, { piece: option.junctionId, crossing: option.crossingId ?? '' })
+  }
+  if (option.variant === 'rejoin') {
+    return t('branch.option.rejoin', { piece: option.junctionId, rejoin: option.rejoinId ?? '' })
+  }
+  if (option.variant === 'stub') return t('branch.option.stub', { piece: option.junctionId })
+  return t('branch.option.plain', { piece: option.junctionId })
 }
 
 /** Osion päätykahvat kartalle. */

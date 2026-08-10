@@ -30,6 +30,21 @@ kohdasta, mutta vain sellaisista, joissa sekä vaihdetta edeltävä että sitä
 seuraava väli on täytettävissä (`nearestFillable`-tyylinen haku
 täyttötaulukosta). Vaihde liukuu siis vapaasti, mutta napsahtaa palarajoihin.
 
+#### Liitinparillisuus: miksi mäen jälkeiselle suoralle mahtuu vaihde
+
+Täyttösuorat kulkevat aina kolosta tappiin, joten osuus, jonka pää on
+"väärässä" parillisuudessa, ei täyty niillä lainkaan. Radalla sellaisia
+osuuksia on tasan yhdestä syystä: **mäkielementti kääntää parillisuuden** ja
+palauttaa sen `C2`:lla ja `B2`:lla (`data/elements/basic.json`). Mäen jälkeinen
+suora alkaa siis sukupuolenvaihtajalla — ja se on usein radan pisin suora.
+
+Ilman erillistä käsittelyä täyttö päätyisi väärään liittimeen ja upotus
+hylättäisiin, jolloin käyttäjä saisi "vaihde ei mahdu" juuri siellä missä tilaa
+on eniten. Siksi osuuden päät tarkistetaan ennen muuta: jos alkuun tai loppuun
+tarvitaan vaihtaja, se varataan ensin ja väli täytetään tavalliseen tapaan.
+Ratkaisu on sama kuin BRIO:lla itsellään — juuri tähän `B2` ja `C2` ovat
+olemassa.
+
 Osuuden rajaus on sama `naturalSection` kuin osion valinnassa, ja korvattavuuden
 ehdot ovat samat: keskeltä ei saa lähteä haaraa, päiden on oltava samalla
 tasolla. Sama koneisto palvelee kolmea eri tehtävää, mikä on tarkoituskin.
@@ -64,11 +79,64 @@ Järjestys: **lähin haarakohta voittaa**. Tasapelin ratkaisee palan luonne, ja
 sekin datasta: `basic`-vaihde on halvin, risteys kalliimpi (se muuttaa radan
 luonnetta) ja harvinainen pala kalliimpi vielä.
 
+### Käyttämätön haaraportti maksaa
+
+Kolmisuuntainen vaihde (`I`/`J`) ja tähtiristeys (`X`) kelpaavat haarakohdaksi,
+mutta yhtä haaraa varten ne jättävät radalle suunnan, joka ei johda mihinkään.
+Lattialla se on irrallinen kiskonpää, ja kartalla se näyttää virheeltä — juuri
+siltä miltä se tuntuikin, kun suorasta vedetty uloke tuotti nelisuuntaisen
+palan yhdellä irtonaisella haaralla.
+
+Siksi jokainen käyttämättä jäävä haaraportti lisää palan järjestyskustannusta.
+Sakko ei sulje mitään pois: jos piirretty viiva vaatii 90°:n haaran, `T` on yhä
+ainoa pala joka sen tekee ja voittaa sakostaan huolimatta.
+
+**Puhdas risteys ei ole vaihde.** `H`, `H1` ja `H2` jäävät pois sekä
+upotuksesta että kaaren vaihdosta: niiden "haara" on läpimenevä toinen raide,
+jonka *molemmat* päät jäisivät ilmaan. Risteämän ratkaisu käyttää ne erikseen
+(luku 3).
+
+### Kun osoitettuun kohtaan ei mahdu vaihdetta
+
+README luku 5 vaatii tähän vastauksen: "syy + lähin mahdollinen haarakohta".
+Jos nappausetäisyydeltä ei löydy yhtään haarakohtaa, haku toistetaan
+kolminkertaisella etäisyydellä. Haara ei silloin ala aivan sormen alta, mutta
+haamuesikatselu näyttää mihin se tuli, ja se on parempi vastaus kuin
+kieltäytyminen. Vasta jos sekään ei tuota mitään, kerrotaan syy.
+
 ## 2. Sovitus haarasta (`extend.ts`)
 
 Haarakohdasta eteenpäin käytetään **samaa keilahakua** kuin muussakin piirrossa,
 aloituskehys kiinnitettynä haaraporttiin. Vapaa pää jää vapaaksi: haara ei
 sulkeudu mihinkään, joten sauman ongelmaa ei ole.
+
+### Yhdistävä haara: veto, joka palaa radalle
+
+Jos vedon **molemmat päät** ovat nappausetäisyydellä radasta, käyttäjä ei
+piirtänyt umpiperää vaan ohituskaiteen. Silloin toinenkin pää tarvitsee oman
+vaihteensa, ja ketju sovitetaan sen porttiin **kiinnitettynä maalina** — sama
+`GoalFrame` kuin osion korvauksessa. Ilman tätä viiva päättyisi toisen radan
+viereen ilman liitosta: kartalla yhtenäisen näköinen, lattialla irrallinen.
+
+Haaran päät eivät ole symmetriset, ja syy on liitinsukupuolessa. Ketju kulkee
+koko matkan kolosta tappiin, joten se voi **lähteä** vain tappiportista ja
+**päättyä** vain koloporttiin. Palakirjastossa nämä ovat eri paloja: `L`, `M`,
+`O1`, `T` ja `I` tarjoavat tappihaaran, kun taas `J`, `P` ja `X`:n pohjoisportti
+tarjoavat kolon. Haarakohtien haku tekee siis saman kysymyksen kahteen suuntaan
+(`arrival`-lippu), eikä kumpikaan pää saa käyttää toisen listaa.
+
+Päätyheitto jaetaan haaran **omille liitoksille** samalla mallilla kuin osion
+korvauksessa, joten kumpikaan vaihde ei liiku.
+
+Yhdistävä haara maksaa kaksi vaihdetta, joten se häviäisi kustannuksissa aina
+umpiperälle. Hyvitys pitää sen edellä silloin kun kumpikin kelpaa — mutta
+molemmat tarjotaan, koska "umpiperä vai lenkki" on käyttäjän valinta.
+
+Se maksaa myös aikaa: haarakohtahaku tehdään vedon kummastakin päästä, ja
+päätyhaku toistuu jokaiselle lähtökohdalle erikseen (rata on eri jokaisen
+upotuksen jälkeen). Siksi yhdistävää haaraa yritetään vain muutamasta
+halvimmasta lähtökohdasta. Raskain veto — molemmat päät radalla ja ylitys
+matkalla — vie kehityskoneella noin 130 ms 70 palan radalla.
 
 Käytettävissä oleva kokoelma on käyttäjän palat **miinus se mikä on jo kiinni
 radalla**, aivan kuten osion korvauksessa. Vaihde varataan ennen täyttöä: se on
@@ -90,8 +158,13 @@ törmäyslaskurilla, ja vierekkäiset kosketukset niputetaan yhdeksi ylitykseksi
 (yksi ylitys koskettaa tyypillisesti kahta palaa). Liitoksessa kiinni olevat
 palat jätetään pois — haaran ensimmäinen pala lähtee vaihteen portista, ei sen
 yli. **Vain yksi risteämä kerrallaan ratkaistaan**: useampi ylitys yhdellä
-vedolla on kysymys, johon ei ole yhtä vastausta, ja se sanotaan käyttäjälle
-suoraan.
+vedolla on kysymys, johon ei ole yhtä vastausta.
+
+Risteämä tarjotaan **myös silloin kun rataa ennen pysähtyvä haara jo kelpasi.**
+Keilahaku palauttaa monta ketjua, ja jos pisin niistä leikkaa radan, lyhyempi
+kelpaava ei ole vastaus kysymykseen "yli vai poikki" — se on vain hiljainen
+tapa jättää puolet vedosta huomiotta. Molemmat menevät siis kartalle
+vaihtoehdoiksi.
 
 ### Tasoristeys
 
@@ -133,6 +206,16 @@ risteämän molemmin puolin, yhteensä vähintään mäkielementin mitta (684 ta
 päätä, siltaa ei tarjota. Se ei ole algoritmin puute vaan lattialla mitattava
 tosiasia, ja käyttäjälle sanotaan se sellaisenaan.
 
+### Tynkä: kun kumpikaan vastaus ei mahdu
+
+Jos ylitykselle ei löydy risteystä eikä siltaa — esimerkiksi kokoelmasta
+puuttuvat molemmat — koko vetoa ei heitetä pois. Viivasta toteutetaan se osa,
+joka on toteutettavissa: haara pysähtyy ennen rataa, ja käyttäjä näkee kartalta
+mihin asti. Vajaa vastaus on rehellinen ja parempi kuin kieltäytyminen, ja
+nimilappu kertoo suoraan mistä on kyse ("Haara ennen rataa").
+
+Vasta jos tynkäkään ei mahdu, kerrotaan syy.
+
 ## 4. Valinta: milloin kysytään ja milloin ei
 
 README luku 5: "Jos yksi voittaa selvästi → automaattinen; muuten
@@ -145,7 +228,10 @@ haamuesikatselut kartalla."
   osaa vastata siihen käyttäjän puolesta.
 
 Vaihtoehtoja tarjotaan enintään kolme, ja niistä karsitaan päällekkäiset: kaksi
-lähes samanlaista haamua kartalla ei ole valinta vaan sotku.
+lähes samanlaista haamua kartalla ei ole valinta vaan sotku. Päällekkäisyys
+mitataan koko vastauksesta — haarapala, haarakohdan laji, haaran laji
+(umpiperä / yhdistävä / tynkä) ja risteämän ratkaisu — koska sama vaihde eri
+lopputuloksella on eri vastaus eikä kaksoiskappale.
 
 ## 5. Haamuesikatselu
 
@@ -181,3 +267,13 @@ autosolverin variaatiokuvio (README luku 6), ja se tuli vaiheessa 5
 haaran saa nyt myös purkaa valitsemalla sen osioksi. Paluu käy yhä myös
 generoimalla uudelleen — generoitu, piirretty ja muokattu rata elävät
 rinnakkain kuten ennenkin.
+
+Yhä auki:
+
+- **Useampi ylitys yhdellä vedolla** ratkeaa yhä vain tynkänä: ensimmäinen
+  risteämä ratkaistaan tai ei kumpaakaan. Ketjutettu ratkaisu vaatisi
+  ylityskohtaisen kysymyksen, eli monivaiheisen haamukyselyn.
+- **Osion korvaus parillisuuden vaihtavalle osuudelle** ei onnistu:
+  keilahaun palavalikoimassa ei ole sukupuolenvaihtajia, joten piirretty
+  korvaus ei voi päätyä "väärään" liittimeen. Vaihteen upotus osaa sen nyt,
+  osion korvaus ei vielä.

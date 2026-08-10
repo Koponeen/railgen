@@ -2,7 +2,9 @@
 
 Nettisivulla toimiva generaattori, joka luo satunnaisia BRIO-yhteensopivia puujunaratalayoutteja annetulle lattia-alueelle ja käytettävissä oleville paloille. Suunniteltu **puhelinkäyttöön** ja **olohuonemittakaavaan** (iltapäiväleikki, ei leikkihuoneen jättiradat). Myös IKEA Lillabo -osat huomioidaan.
 
-Tämä dokumentti on projektin suunnitteluspesifikaatio. Toteutusta ei ole vielä aloitettu.
+Tämä dokumentti on projektin suunnitteluspesifikaatio ja päätösten totuuden lähde.
+Toteutuksen tila ja vaiheistus: ks. **Kehitys** tämän dokumentin lopussa ja
+`docs/IMPLEMENTATION_PLAN.md`.
 
 ---
 
@@ -117,6 +119,10 @@ Säätökohteet: siksak-sakko (suunnanvaihdoista sakotetaan), 45°-lokerointi, t
 
 **Haara mutkaan** (piirto osuu kaarelle): kaaret ovat jäykkiä pisteitä, suorat liukuvia ankkurivyöhykkeitä (vaihde voi asettua suoralle mihin kohtaan vain uudelleentäytöllä). Ehdokkaat: suora ennen mutkaa, suora mutkan jälkeen, kaaren vaihto haaroittavaan (H3/O/P/I/J, pakkosuunta). Jos yksi voittaa selvästi → automaattinen; muuten **haamuesikatselut kartalla** (2–3 vaihtoehtoa, napautus valitsee). Jos mikään ei kelpaa → syy + lähin mahdollinen haarakohta. Nappausetäisyys ~1 solu.
 
+**Haaran toinen pää.** Veto, joka *päättyy* radalle, on ohituskaide eikä umpiperä: se saa vaihteen molempiin päihinsä ja aidon liitoksen kumpaankin. Päät eivät ole symmetriset, koska ketju kulkee kolosta tappiin — lähtöporttien ja päätösporttien palat ovat eri palat (L/M/T vastaan J/P). Umpiperä tarjotaan silti rinnalla: kumpi niistä, on käyttäjän valinta.
+
+**Vajaa vastaus ennen kieltäytymistä.** Kun ylitykselle ei löydy risteystä eikä siltaa, vedosta toteutetaan se osa joka on toteutettavissa: haara pysähtyy ennen rataa. Vasta jos sekään ei mahdu, kerrotaan syy.
+
 ---
 
 ## 6. Muokkaus ja autosolver
@@ -149,7 +155,7 @@ Pisteytys: monipuolisuus (uusi elementtityyppi = bonus), inventaario, joustobudj
 
 1. **Alue**: suorakaide (leveys × syvyys) tai L (suorakaide + leikattu nurkka), max 4 lukua. Pyöritys on vain esitystason asia. Pikakoot ("matto 2×1,5 m").
 2. **Palat**: lukumäärät per tyyppi. Skippaus = rajattomat peruspalat → tulos on ostoslista. Admin-määriteltävät esiasetukset (settikohtaiset). Joustopala-checkbox. Tallennus localStorageen.
-3. **Generoi/piirrä/muokkaa**: satunnaisgenerointi tai piirto; muokkaus (osion korvaus, lisäävä piirto, vaihto, poisto); risteämiskyselyt; juokseva osaluettelo (punainen kun inventaario ylittyy).
+3. **Generoi/piirrä/muokkaa**: satunnaisgenerointi tai piirto; **Tyhjennä** aloittaa piirron puhtaalta pöydältä (generoitu rata jää siemenensä taakse, ja "Generoi" tuo sen takaisin); muokkaus (osion korvaus, lisäävä piirto, vaihto, poisto); risteämiskyselyt; juokseva osaluettelo (punainen kun inventaario ylittyy).
 4. **Tulos**: selkeä kuva koko radasta, radan pituus (keskilinjasumma), äärimitat (jalanjälkien bbox + marginaali), lopullinen osaluettelo, printti (kuva + lista samalle arkille), jako. Monitasoisille tasovalitsin (myöhemmin).
 
 ### Eleet (puhelin ensin)
@@ -243,8 +249,12 @@ Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
   poiston aukkomerkki Solver-täyttöineen ja variaatiokuviokirjasto datana
   (`data/variations/`) — sivuraide, ohituskaide, S-kiemura, pullistuma, mäki, viisto
   venytys ja risteys + haara. Ks. `docs/VARIATIONS.md`.
+- **Vaihe 6** (haarapiirto lattiatestin jälkeen): tyhjä pöytä piirtämisen lähtökohtana,
+  yhdistävä haara (vaihde molempiin päihin), vaihteen upotus myös liitinparillisuuden
+  vaihtavalle osuudelle ja vajaa vastaus kieltäytymisen sijaan. Ks. `docs/BRANCHING.md`
+  ja `docs/UI.md`.
 
-Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2–5 tuovat piirron,
+Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2–6 tuovat piirron,
 muokkauksen ja autosolverin sen päälle.
 
 Palakirjasto kattaa suorat sukupuolivariantteineen, kaaret, rampit, sillan kannet,
