@@ -106,6 +106,36 @@ Järjestys: **lähin haarakohta voittaa**. Tasapelin ratkaisee palan luonne, ja
 sekin datasta: `basic`-vaihde on halvin, risteys kalliimpi (se muuttaa radan
 luonnetta) ja harvinainen pala kalliimpi vielä.
 
+#### Mitattu: miksi `T` häviää kohtisuoralle vedolle (siemen `0EDBS0E`)
+
+`T` **mahtuu** radan pisimmälle suoralle (1458 mm) ja **tarjotaan** — se on
+kolmas kolmesta. Ja se on ainoa, jonka haaraportti osoittaa kohtisuoraan
+(`dir2`); `L` ja `O1` osoittavat 45°:seen (`dir1`).
+
+| Pala | Haarakohta | Sovitus | Yhteensä |
+|---|---|---|---|
+| `L` | 146 = offset 146 + sakko 0 | 262 | **408** |
+| `O1` | 136 = offset 76 + sakko 60 | 291 | **427** |
+| `T` | 207 = offset 147 + sakko 60 | **227** | **434** |
+
+**Sovitus antaa `T`:lle parhaan tuloksen** — se seuraa piirrettyä viivaa
+mitatusti parhaiten, kuten pitääkin. Se häviää silti, koska haarakohdan hinta
+on samaa suuruusluokkaa kuin sovituksen ja kumoaa sen. Kaksi termiä tekee sen:
+
+- **`basic`-bonus 60.** `L` ja `M` on tagattu `basic`, `T` ei. Tavallisuus on
+  hyvä tasapelin ratkaisija muttei peruste ohittaa mitattua muotoa.
+- **`offsetMm`, etäisyys sormesta haaraporttiin.** Se suosii lyhyttä palaa:
+  `O1` (108 mm) jättää porttinsa 76 mm:n päähän, `T` (216 mm) 147 mm:n. Se on
+  geometrinen sattuma eikä laatusignaali.
+
+Korjaus on käsitteellinen: **haarakohdan hinnan kuuluu ratkaista tasapelit, ei
+tuomita muotoa.** Kokeiltu neljäsosa- ja puolipainolla — `T` nousi kummallakin
+ensimmäiseksi (279 vastaan `L` 298), mutta samalla siltavaihtoehto putosi
+risteämien kärkikolmikosta, koska anturoiden hintojen kutistuessa
+tasoristeysvariantit ruuhkautuvat sen edelle. Muutos on siksi peruttu: se
+vaatii samalla `rank`-karsinnan muuttamisen niin, että risteämästä näytetään
+yksi vaihtoehto per ratkaisu (yli vai poikki), ei kolmea tasoristeystä.
+
 **T ei ole risteys.** Se sai aluksi saman sakon kuin `X`, koska molemmilla on
 `tee`/`star`-tagi — ja siksi kohtisuoraan piirretty haara sai vastaukseksi
 mutkan, vaikka juuri `T` tekee sen mitä pyydettiin. `T` on tavallinen yhden

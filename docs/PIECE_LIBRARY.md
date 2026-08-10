@@ -162,6 +162,26 @@ sisääntulon keskilinjasta. Sivusiirtymäksi on oletettu ±23 mm, koska kaksois
 lähteen mukaan 46 mm keskeltä keskelle eikä muuta lukua ole tarjolla. Myös palan sisäinen
 muoto on piirretty arvaamalla. Kun oikeat mitat löytyvät, tagi pois ja luvut tilalle.
 
+## Tarkistettavat liittimet
+
+**`T`-risteyksen haaraportti.** Omistaja lukee palasta: vasemmalla kolo,
+oikealla tappi, **alhaalla kolo**. Datassa haaraportti on nyt `pin`, eli tappi.
+Ristiriita on kirjattava eikä korjattava huomaamatta, koska se **kääntää palan
+käyttötavan**: koloportista ei voi lähteä ketju (ketju kulkee kolosta tappiin),
+vaan siihen voi vain saapua. Kolo alhaalla tarkoittaisi siis, että `T`:n haara
+rakennetaan sen vapaasta päästä `T`:tä kohti — ei `T`:stä ulospäin.
+
+Sillä on kaksi seurausta, jotka on ratkaistava yhdessä eikä erikseen:
+
+1. `T` katoaisi kohtisuoran haaran **lähtökohdista** — juuri siitä käytöstä,
+   jota se on tarkoitettu palvelemaan.
+2. `T` ilmestyisi **saapumiskohtiin**, ja silloin se olisi ensimmäinen
+   kaksihaarainen vaihde, johon yhdistävä haara voi päättyä ilman roikkuvaa
+   suuntaa (`docs/BRANCHING.md`) — eli ratkaisu toiseen avoimeen ongelmaan.
+
+Ennen datan muuttamista on siis päätettävä, rakennetaanko `T`:n haara sen
+vapaasta päästä alkaen. Mitta on yhden rivin muutos; käyttötavan kääntö ei.
+
 ## Odottavat palat
 
 Näitä ei ole kirjastossa. Työskentelykäytäntö on selvä: *jos mitat epäilyttävät, tarkista
