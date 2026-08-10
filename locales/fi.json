@@ -112,10 +112,13 @@
     "choose": "Valitse haara kartalta.",
     "cancel": "Peruuta",
     "added": "Haara lisätty: {pieces} palaa · rata {length} m · {change}",
+    "continued": "Rataa jatkettu: {pieces} palaa · rata {length} m · {change}",
     "uses": "käyttää {added}",
+    "frees": "vapauttaa {removed}",
     "change": "käyttää {added}, vapauttaa {removed}",
     "option": {
       "plain": "Haara ({piece})",
+      "continue": "Jatka päästä",
       "rejoin": "Yhdistävä haara ({piece}+{rejoin})",
       "stub": "Haara ennen rataa ({piece})",
       "level": "Tasoristeys ({crossing})",
@@ -143,6 +146,7 @@
     "remove": "Poista",
     "notReplaceable": "Tätä osiota ei voi korvata piirtämällä.",
     "replaced": "Osio korvattu: {pieces} palaa · rata {length} m · poikkeama {deviation} mm",
+    "removed": "Poistettu {pieces} palaa · rata {length} m · {change}",
     "failure": {
       "unknown": "Osiota ei voitu korvata.",
       "section-not-replaceable": "Tätä osiota ei voi korvata: sen keskeltä lähtee haara tai se kattaa koko radan.",
@@ -155,8 +159,9 @@
     }
   },
   "gap": {
-    "open": "Aukko {length} cm. Täytä, piirrä tilalle tai kumoa.",
+    "open": "Aukko {length} cm. Jätä auki, täytä, piirrä tilalle tai kumoa.",
     "fill": "Täytä",
+    "keep": "Jätä auki",
     "undo": "Kumoa",
     "failure": {
       "unknown": "Aukkoa ei voitu täyttää.",
@@ -176,6 +181,7 @@
   },
   "variation": {
     "name": {
+      "straighten": "Suorista",
       "siding": "Sivuraide",
       "passing-loop": "Ohituskaide",
       "s-bend": "S-kiemura",

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createInventory } from '../core/inventory'
 import { defaultLibrary } from '../core/library'
 import { generate } from '../gen/generate'
-import { AREA, buildLoop } from './section.test'
+import { AREA, buildChain, buildLoop } from './section.test'
 import { makeSection, naturalSection, sectionBrief } from './section'
 import { solveSection } from './solve'
 
@@ -132,5 +132,54 @@ describe('solveSection', () => {
     const options = solveSection(track, section, { area })
     expect(options.length).toBeGreaterThan(0)
     for (const option of options) expect(option.track.collisions).toBeLessThanOrEqual(track.collisions)
+  })
+})
+
+describe('straightening a winding section', () => {
+  /**
+   * Symmetrinen pullistuma: ulos ja takaisin, päät samalla linjalla ja samaan
+   * suuntaan. Sen yksinkertaisin vaihtoehto on suora — ja juuri sitä ei ennen
+   * tarjottu, koska mutkittelevalle osuudelle ei kelvannut yksikään kuvio.
+   */
+  const BULGE = [
+    { id: 'D' },
+    { id: 'E', mirror: true },
+    { id: 'E' },
+    { id: 'D' },
+    { id: 'E' },
+    { id: 'E', mirror: true },
+    { id: 'D' },
+  ]
+
+  function bulgeSection(track: ReturnType<typeof buildChain>) {
+    const section = makeSection(track, library, [1, 2, 3, 4, 5])
+    if (!section) throw new Error('no section')
+    return section
+  }
+
+  it('offers a straight for a section that wanders and comes back', () => {
+    const track = buildChain(BULGE)
+    const options = solveSection(track, bulgeSection(track), { area: AREA, maxOptions: 4 })
+    expect(options.some((option) => option.family === 'straighten')).toBe(true)
+  })
+
+  it('makes the track shorter by exactly what the detour cost', () => {
+    const track = buildChain(BULGE)
+    const straighten = solveSection(track, bulgeSection(track), { area: AREA, maxOptions: 4 }).find(
+      (option) => option.family === 'straighten',
+    )
+    if (!straighten) throw new Error('no straightening')
+    expect(straighten.track.lengthMm).toBeLessThan(track.lengthMm)
+    // Kaaret lähtevät radalta: suora ei tarvitse niitä.
+    expect(straighten.removed.E).toBe(4)
+    expect(straighten.added.E ?? 0).toBe(0)
+  })
+
+  it('does not offer to straighten what is already straight', () => {
+    const track = buildLoop()
+    const section = naturalSection(track, library, 1)
+    if (!section) throw new Error('no section')
+    const options = solveSection(track, section, { area: AREA, maxOptions: 4 })
+    expect(options.some((option) => option.family === 'straighten')).toBe(false)
   })
 })

@@ -9,12 +9,33 @@ veto radan vierestä -> haarakohta -> sovitus haarasta -> risteämä? -> vaihtoe
                        branch.ts     beam.ts            crossing.ts   extend.ts
 ```
 
-Sivulla 3 vedolla on kolme merkitystä, ja ne erottuvat siitä **mistä veto alkaa**:
-valittu osio tekee siitä korvauksen (`docs/EDITING.md`), radan vierestä alkava
-veto on uusi haara, ja muualta alkava veto on uusi rata (`docs/DRAWING.md`).
-Nappausetäisyys on yksi looginen solu (216 mm), sama luku kuin silmukan
-sulkeutumistulkinnassa. Vedon saa aloittaa kummasta päästä tahansa: radan
-lähempi pää on haaran juuri.
+Sivulla 3 vedolla on neljä merkitystä, ja ne erottuvat siitä **mistä veto
+alkaa**: valittu osio tekee siitä korvauksen (`docs/EDITING.md`), **radan
+avoimen pään vierestä** alkava veto jatkaa rataa, muualta radan vierestä alkava
+veto on uusi haara, ja radasta kaukana alkava veto on uusi rata
+(`docs/DRAWING.md`). Nappausetäisyys on yksi looginen solu (216 mm), sama luku
+kuin silmukan sulkeutumistulkinnassa. Vedon saa aloittaa kummasta päästä
+tahansa: radan lähempi pää on haaran juuri.
+
+## 0. Jatko radan päästä
+
+Kiskonpään viereen ei työnnetä vaihdetta. Radan avoimen pään vieressä veto
+tarkoittaa lähes aina "jatka tästä", ja niin se myös tulkitaan: jatko on
+haarakohta, joka ei lisää vaihdetta eikä muuta rataa mitenkään — se on pelkkä
+valmis kehys, josta sovitus jatkaa. Hyvitys tekee siitä selvän voittajan, joten
+veto menee läpi ilman kysymystä. Haaran saa yhä aloittamalla vedon pään
+ulottumattomista.
+
+Avoin pää on kolmenlainen ja kaikki kolme ovat lattialla sama asia: piirretyn
+radan pää, piirretyn haaran vapaa pää ja vaihteen käyttämättä jäänyt
+haaraportti (`freeEnds`, `section.ts`).
+
+**Radan kaksi päätä eivät jatku samalla tavalla.** Ketju kulkee kolosta
+tappiin, joten tappiportista se jatkuu suoraan eteenpäin, mutta koloportista
+ketju on rakennettava lattialta kiskonpäätä kohti ja kiinnitettävä vasta
+lopustaan (`backwardOptions`) — sama kiinnitetyn maalin koneisto kuin osion
+korvauksessa. Piirretyllä radalla on aina tasan yksi kumpaakin päätä, joten
+ilman jälkimmäistä puolet radan päistä ei jatkuisi lainkaan.
 
 ## 1. Haarakohta (`branch.ts`)
 

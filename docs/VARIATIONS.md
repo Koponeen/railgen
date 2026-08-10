@@ -51,12 +51,22 @@ sitten mitä pitäisi hankkia.
 README: "Poisto jättää aukkomerkin: täytä automaattisesti (Solver) / piirrä
 tilalle / kumoa."
 
-Poisto on siis **välitila, ei lopputulos**. Rata ilman osiotaan ei ole ehjä
-rata, joten `removeSection` ei tuota valmista rataa vaan esikatselun ja
-aukkomerkin: kaksi avointa päätyporttia ja mitta niiden välillä. Kartta piirtää
-merkin katkoviivana, ja toimintorivi vaihtuu kolmeen vastaukseen.
+Radan **keskeltä** poisto on välitila: `removeSection` ei tuota valmista rataa
+vaan esikatselun ja aukkomerkin — kaksi avointa päätyporttia ja mitta niiden
+välillä. Kartta piirtää merkin katkoviivana, ja toimintorivi vaihtuu neljään
+vastaukseen: **jätä auki / täytä / piirrä tilalle / kumoa.**
 
-**Muokattava rata on koko ajan alkuperäinen.** Kaikki kolme vastausta lähtevät
+"Jätä auki" on niistä lopputulos, ja se puuttui aluksi. Ilman sitä poistosta ei
+koskaan tullut valmista: täyttö ja piirto rakensivat palat takaisin ja kumous
+palautti vanhan, joten poistonappi ei poistanut mitään. Avoin rata on kuitenkin
+rata siinä missä silmukkakin — piirtämällä sellaisen saa muutenkin — joten
+esikatselun saa myös pitää.
+
+Radan **päästä** poisto ei ole välitila lainkaan vaan toteutuu suoraan: siellä
+ei ole aukkoa vaan kiskonpää, joka siirtyy taaksepäin, eikä siitä ole mitään
+kysyttävää (`docs/EDITING.md`).
+
+**Muokattava rata on koko ajan alkuperäinen.** Kaikki vastaukset lähtevät
 siitä: täyttö ja piirto saavat saman osion kuin ennen poistoa, ja kumoaminen on
 pelkkä esikatselun hylkäys. Rikkinäistä välitilaa ei siis ole olemassa, vaikka
 kartalla näkyy aukko.
@@ -74,6 +84,27 @@ vaihteen upotuksessa, mutta **tyhjällä ytimellä** — koko väli on täyttö�
 Siitä seuraa yksi rehellinen rajoitus: aukon päiden on oltava samalla linjalla.
 Mutkan yli venytetyn valinnan jälkeen ne eivät ole, ja Solver sanoo sen suoraan
 sen sijaan että arvaisi kaaria väliin. Piirtäminen tilalle toimii silloinkin.
+
+## 3.5 Suoristus: yksinkertaisin vaihtoehto mutkalle
+
+Valmiit kuviot upotetaan **suoralle** osuudelle: kuvio korvaa osan siitä ja
+loput täytetään suorilla. Mutkittelevalle osuudelle ei siis kelpaa yksikään
+niistä, ja siksi "Vaihtoehdot" jäi sellaisella tyhjäksi — vaikka mutkalla on
+yksi ilmeinen vaihtoehto, jota kuviokirjastossa ei ole: **suora**.
+
+Mutka, joka lähtee ulos ja palaa takaisin, kuluttaa paloja saamatta aikaan
+mitään mitä suora ei saisi. Suoristus tarjotaan, kun geometria sen sallii:
+päätyporttien on osoitettava samaan suuntaan ja loppuportin on oltava
+alkuportin suoralla. Sivuttaisheiton nielee Vario-budjetti, ja `assembleTrack`
+hylkää sen jos se ei mahdu — arvaamiselle ei jää sijaa.
+
+Koneisto on sama `insertIntoRun` tyhjällä ytimellä kuin aukon täytössä. Ero on
+yksi luku: täyttö saa pituudekseen **päätyporttien välin** eikä purettavien
+palojen nimellispituutta. Juuri sen erotuksen verran mutka oikenee, ja siksi
+suoristus lyhentää rataa vaikka päätyportit pysyvät paikallaan.
+
+Jo valmiiksi suoraa osuutta ei tarjota suoristettavaksi: alle yhden lyhimmän
+suoran oikaisu ei näy lattialla eikä säästä palaa.
 
 ## 4. Variaatiokuviot dataa (`data/variations/`, `variations.ts`)
 

@@ -14,17 +14,26 @@ const MAX_SCALE = 8
 /**
  * Kahvan koko pysyy samana ruudulla, ei maailmassa: sormi on aina yhtä paksu,
  * vaikka kartta olisi zoomattu palan mittaan. Osuus alueen mitasta on säädetty
- * niin, että kokonäkymässä nuppi on ~44 px eli sormimitoituksen minimi
+ * niin, että kokonäkymässä nupin **halkaisija** on sormimitoituksen minimi
  * (UI-linjaus 3), ja zoom pienentää maailmasädettä samassa suhteessa.
+ *
+ * Suhdeluku oli aiemmin kaksinkertainen, jolloin nuppi oli halkaisijaltaan
+ * ~44 px:n sijaan ~88 px: se peitti puolet valitusta osuudesta eikä osiota
+ * nähnyt kahvojen alta. Osuma-alue on nuppia isompi, joten pienempi nuppi ei
+ * tee osumisesta vaikeampaa.
  */
-const HANDLE_SPAN_RATIO = 0.05
+const HANDLE_SPAN_RATIO = 0.025
 const HANDLE_MIN_RADIUS_MM = 12
 const HANDLE_MAX_RADIUS_MM = 250
 /** Osuma-alue on nuppia reilusti isompi: kahvaan pitää osua ilman tähtäilyä. */
-const HANDLE_HIT_RATIO = 2.2
+const HANDLE_HIT_RATIO = 2.6
 
-/** Näin kapeaa osiota ei zoomata koko ruudun kokoiseksi: konteksti katoaisi. */
-const MIN_SELECTION_SPAN_MM = CELL_MM * 3
+/**
+ * Näin kapeaa osiota ei zoomata koko ruudun kokoiseksi: konteksti katoaisi.
+ * Yhden palan valinta on tämän mitan tapaus, ja se on nimenomaan se hetki
+ * jolloin ympäristö ratkaisee — "mihin tämä pala liittyy" on koko kysymys.
+ */
+const MIN_SELECTION_SPAN_MM = CELL_MM * 5
 
 export type { BBox }
 

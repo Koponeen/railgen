@@ -145,6 +145,16 @@ Ensimmäinen käyttökerta oikealla radalla nosti esiin kolme asiaa, jotka spesi
 - Lisäksi: käyttämätön haaraportti maksaa (kolmisuuntainen vaihde ei enää jätä irrallista kiskonpäätä kevyesti), risteämä tarjotaan myös lyhyemmän haaran rinnalla, haarakohtaa haetaan kauempaa jos osoitettuun kohtaan ei mahdu, ja ratkaisemattomasta ylityksestä tarjotaan tynkä kieltäytymisen sijaan.
 - **Commit**: `Fix branch drawing: clear board, connecting branches and gender-changing runs`
 
+### Vaihe 7 — Radan päät ja poisto *(Opus)*
+
+Toinen lattiatesti nosti esiin, että koodi ei tuntenut radan **avoimia päitä** lainkaan — sama puute näkyi kolmena eri vikana.
+
+- **Jatko päästä.** Kiskonpään vieressä veto luki tilanteen haaraksi ja työnsi vaihteen viereen. Nyt avoin pää on haarakohta, joka ei lisää mitään, ja se on oletus pään ympärillä. Radan kaksi päätä jatkuvat eri tavoin: koloportista ketju rakennetaan päätä kohti.
+- **Poisto.** Radan päästä poisto ei tuottanut mitään, koska vapaa pää luettiin porttipariksi ja aukko tarjottiin täytettäväksi takaisin. Nyt päästä poisto toteutuu suoraan, ja keskeltä poistetun aukon saa myös jättää auki.
+- **Suoristus.** Mutkittelevalle osuudelle ei kelvannut yksikään valmis kuvio, koska kaikki upotetaan suoralle. Yksinkertaisin vaihtoehto — suora — on nyt oma ehdotuksensa.
+- Lisäksi valinnan mittasuhteet: zoomaus ei enää mene palan mittaan, ja päätykahvat ovat puolet entisestä.
+- **Commit**: `Continue from rail ends, make deletion final and offer a straight`
+
 Jokainen vaihe on itsenäisesti julkaistava, ja rata on joka välivaiheessa ehjä — epäonnistunut mutaatio tai sovitus ei koskaan jätä rikkinäistä tilaa näkyviin.
 
 ### Haiku — jatkuvat tehtävät

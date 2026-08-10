@@ -112,10 +112,13 @@
     "choose": "Pick a branch on the map.",
     "cancel": "Cancel",
     "added": "Branch added: {pieces} pieces · track {length} m · {change}",
+    "continued": "Track extended: {pieces} pieces · track {length} m · {change}",
     "uses": "uses {added}",
+    "frees": "frees {removed}",
     "change": "uses {added}, frees {removed}",
     "option": {
       "plain": "Branch ({piece})",
+      "continue": "Continue from the end",
       "rejoin": "Connecting branch ({piece}+{rejoin})",
       "stub": "Branch stopping short ({piece})",
       "level": "Level crossing ({crossing})",
@@ -143,6 +146,7 @@
     "remove": "Delete",
     "notReplaceable": "This section cannot be replaced by drawing.",
     "replaced": "Section replaced: {pieces} pieces · track {length} m · off by {deviation} mm",
+    "removed": "Removed {pieces} pieces · track {length} m · {change}",
     "failure": {
       "unknown": "The section could not be replaced.",
       "section-not-replaceable": "This section cannot be replaced: a branch leaves from its middle, or it covers the whole track.",
@@ -155,8 +159,9 @@
     }
   },
   "gap": {
-    "open": "Gap of {length} cm. Fill it, draw instead, or undo.",
+    "open": "Gap of {length} cm. Leave it open, fill it, draw instead, or undo.",
     "fill": "Fill",
+    "keep": "Leave open",
     "undo": "Undo",
     "failure": {
       "unknown": "The gap could not be filled.",
@@ -176,6 +181,7 @@
   },
   "variation": {
     "name": {
+      "straighten": "Straighten",
       "siding": "Siding",
       "passing-loop": "Passing loop",
       "s-bend": "S-bend",

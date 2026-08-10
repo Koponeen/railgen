@@ -68,6 +68,13 @@ const TIGHTNESS_COST = 4
 const PIECE_COST = 3
 
 /**
+ * Näin paljon suoran on lyhennettävä osuutta, jotta sen tarjoaminen on
+ * mielekästä. Yhden lyhimmän suoran verran: sitä pienempi oikaisu ei näy
+ * lattialla eikä säästä palaa.
+ */
+const MIN_STRAIGHTENING_MM = 54
+
+/**
  * Osuuden vaihtoehdot parhaimmasta alkaen. Alkuperäinen rata jää
  * koskemattomaksi: jokainen vaihtoehto on oma valmis ratansa, ja käyttäjä
  * valitsee niistä yhden napauttamalla haamua kartalla.
@@ -76,6 +83,7 @@ export function solveSection(track: Track, section: Section, options: SolveOptio
   const library = options.library ?? defaultLibrary()
   const inventory = options.inventory ?? unlimitedInventory()
   const found: SolveOption[] = [
+    ...straightenOptions(track, section, options, library, inventory),
     ...variationOptions(track, section, options, library, inventory),
     ...swapOptions(track, section, { ...options, library, inventory }).map((option) => ({
       kind: 'swap' as const,
@@ -100,6 +108,72 @@ export function solveSection(track: Track, section: Section, options: SolveOptio
       return true
     })
     .slice(0, options.maxOptions ?? 3)
+}
+
+/**
+ * Yksinkertaisin vaihtoehto mutkittelevalle osuudelle: **suora**. Mutka, joka
+ * lähtee ulos ja palaa takaisin, kuluttaa paloja saamatta aikaan mitään mitä
+ * suora ei saisi, ja usein juuri sen oikaisu on se mitä käyttäjä hakee.
+ *
+ * Ehto on geometrinen eikä makuasia: päätyporttien on osoitettava samaan
+ * suuntaan ja loppuportin on oltava alkuportin suoralla, koska korvaava ketju
+ * kulkee siitä suoraan. Sivuttaisheiton nielee Vario-budjetti, ja
+ * `assembleTrack` hylkää sen jos se ei mahdu.
+ *
+ * Suora kelpaa vaihtoehdoksi vain jos se lyhentää osuutta: jo valmiiksi suoraa
+ * osuutta ei kannata tarjota "suoristettavaksi".
+ */
+function straightenOptions(
+  track: Track,
+  section: Section,
+  options: SolveOptions,
+  library: PieceLibrary,
+  inventory: Inventory,
+): SolveOption[] {
+  if (!section.replaceable) return []
+  if (section.start.dir !== section.end.dir) return []
+
+  const runMm = section.indices.reduce((sum, index) => sum + library.get(track.pieces[index].pieceId).lengthMm, 0)
+  const spanMm = Math.hypot(section.end.x - section.start.x, section.end.y - section.start.y)
+  if (runMm - spanMm < MIN_STRAIGHTENING_MM) return []
+
+  const available = availableInventory(track, section, inventory)
+  const table = inventoryFillTable(library, available)
+  const inserted = insertIntoRun(
+    track,
+    library,
+    table,
+    inventory,
+    section,
+    (cursor) => ({ placed: [], exit: cursor }),
+    0,
+    { spanMm, snapFill: true },
+  )
+  if (!inserted) return []
+
+  const assembled = assembleTrack(
+    track,
+    { pieces: inserted.pieces, joints: inserted.joints, localJoints: inserted.localJoints, gapMm: inserted.gapMm },
+    { library, inventory, vario: options.vario, flex: options.flex, bounds: areaBounds(buildMask(options.area)) },
+  )
+  if (!assembled.track) return []
+
+  const withinInventory = Object.keys(assembled.track.shortages).length === 0
+  const pieceCount = Object.values(inserted.added).reduce((sum, count) => sum + count, 0)
+  return [
+    {
+      kind: 'variation',
+      id: 'straighten',
+      family: 'straighten',
+      track: assembled.track,
+      addedIndices: newPieceIndices(track, assembled.track),
+      added: inserted.added,
+      removed: inserted.removed,
+      pieceCount,
+      withinInventory,
+      cost: score(track, assembled.track, inserted.added, withinInventory, pieceCount),
+    },
+  ]
 }
 
 function variationOptions(

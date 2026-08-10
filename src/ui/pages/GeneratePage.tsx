@@ -55,6 +55,7 @@ interface GeneratePageProps {
   onSolve: () => void
   onRemove: () => void
   onFillGap: () => void
+  onKeepGap: () => void
   onUndoRemove: () => void
   onHandleMove: (handle: HandleId, point: Point) => void
   onSeedChange: (seed: string) => void
@@ -93,6 +94,7 @@ export function GeneratePage({
   onSolve,
   onRemove,
   onFillGap,
+  onKeepGap,
   onUndoRemove,
   onHandleMove,
   onSeedChange,
@@ -174,6 +176,11 @@ export function GeneratePage({
         <ActionBar>
           <button type="button" class="action" onClick={onUndoRemove}>
             {t('gap.undo')}
+          </button>
+          {/* Aukon saa myös jättää: avoin rata on rata siinä missä silmukkakin,
+              ja ilman tätä poistosta ei koskaan tullut lopputulosta. */}
+          <button type="button" class="action" onClick={onKeepGap}>
+            {t('gap.keep')}
           </button>
           <button type="button" class="action primary" onClick={onFillGap}>
             {t('gap.fill')}
@@ -340,8 +347,15 @@ function describeEdit(edited: EditState): string {
       deviation: formatNumber(Math.round(edited.deviationMm)),
     })
   }
-  if (edited.kind === 'branch') {
-    return t('branch.added', {
+  if (edited.kind === 'remove') {
+    return t('section.removed', {
+      pieces: formatNumber(edited.pieceCount),
+      length: formatMetres(edited.track.lengthMm),
+      change: describeChange(edited),
+    })
+  }
+  if (edited.kind === 'branch' || edited.kind === 'continue') {
+    return t(edited.kind === 'continue' ? 'branch.continued' : 'branch.added', {
       pieces: formatNumber(edited.pieceCount),
       length: formatMetres(edited.track.lengthMm),
       change: describeChange(edited),
@@ -394,6 +408,8 @@ function describeChange(edited: EditState): string {
   if (!edited.change) return ''
   const { added, removed } = edited.change
   if (Object.keys(removed).length === 0) return t('branch.uses', { added: describePieces(added) })
+  // Poisto ei käytä mitään, joten "käyttää ·" jäisi tyhjäksi puoliskoksi.
+  if (Object.keys(added).length === 0) return t('branch.frees', { removed: describePieces(removed) })
   return t('branch.change', { added: describePieces(added), removed: describePieces(removed) })
 }
 

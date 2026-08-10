@@ -17,7 +17,7 @@ import { CELL_MM, EPS_MM } from '../core/units'
 import type { Vec } from '../core/vec'
 import { fitOptions } from '../fit/beam'
 import { availableExcluding, relaxSection, splice } from './replace'
-import { isSoftPiece, naturalSection, neighbourLists, type Section, type TrackChain } from './section'
+import { freeEnds, isSoftPiece, naturalSection, neighbourLists, type Section, type TrackChain } from './section'
 
 // Haarakohdan etsintä (README luku 5, "Haara mutkaan"). Kaksi tapaa liittää
 // uusi ketju valmiiseen rataan:
@@ -58,6 +58,14 @@ const MAX_NEAR_PIECES = 4
  * ainoa pala joka sen tekee ja voittaa sakostaan huolimatta.
  */
 const UNUSED_BRANCH_COST = 400
+
+/**
+ * Radan pään vieressä jatko on oletus, ei yksi vaihtoehto muiden joukossa.
+ * Hyvitys on tarkoituksella suuri: se tekee jatkosta selvän voittajan, jolloin
+ * veto menee läpi ilman kysymystä. Haaran saa yhä, kun vedon aloittaa päästä
+ * kauempaa.
+ */
+export const CONTINUE_BONUS = 5000
 
 /** Keskilinja näytteistetään tällä tiheydellä etäisyysmittausta varten. */
 const SAMPLE_STEP_MM = 20
@@ -101,7 +109,13 @@ export interface RunInsertion {
 
 /** Valmis haarakohta: rata haarapalan lisäämisen jälkeen ja avoin haaraportti. */
 export interface BranchAnchor {
-  kind: 'run' | 'swap'
+  /**
+   * Mistä haara lähtee: suoralle upotetusta vaihteesta (`run`), haaroittavaksi
+   * vaihdetusta kaaresta (`swap`) vai radan omasta avoimesta päästä (`end`).
+   * Viimeinen ei ole haara lainkaan vaan jatko — se ei lisää vaihdetta, koska
+   * kiskonpäähän ei tarvita sellaista.
+   */
+  kind: 'run' | 'swap' | 'end'
   junctionId: string
   portId: string
   /** Avoin haaraportti — uusi ketju lähtee tästä. */
@@ -294,6 +308,16 @@ export interface RunInsertOptions {
   /** Mihin väliin ytimen ankkuri saa asettua osuudella. */
   range?: { minMm: number; maxMm: number }
   /**
+   * Osuuden pituus, jos se on eri kuin purettavien palojen nimellispituus.
+   *
+   * Oletus on nimellispituus, koska vaihteen tai kuvion upotus ei saa muuttaa
+   * osuuden mittaa — muuten muu rata liikkuisi. Mutkitteleva osuus on eri asia:
+   * sen palojen yhteispituus on suurempi kuin päätyporttien väli, ja juuri sen
+   * erotuksen verran mutka siitä oikenee. Suoristus antaa siis tähän päiden
+   * välin, ja tulos on lyhyempi rata samojen porttien välissä.
+   */
+  spanMm?: number
+  /**
    * Saako täyttö jäädä vajaaksi? Suorista koottu ydin osuu mikrogridiin ja
    * täyttyy eksaktisti, mutta kaarista koottu ei (45° → √2). Silloin täyttö
    * napsautetaan lähimpään täytettävään pituuteen ja jäännös jää Varion
@@ -318,7 +342,7 @@ export function insertIntoRun(
   options: RunInsertOptions = {},
 ): RunInsertion | null {
   if (!section.replaceable) return null
-  const runMm = nominalLength(track, library, section.indices)
+  const runMm = options.spanMm ?? nominalLength(track, library, section.indices)
 
   // Osuuden päät voivat olla eri liitinparillisuudessa kuin täyttö (mäen
   // jälkeinen B2/C2). Vaihtajat varataan ensin: ne syövät osuuden liikkumavaraa
@@ -485,7 +509,7 @@ function canAttach(library: PieceLibrary, frame: Frame): boolean {
  * täsmälleen niihin portteihin, joista se ei voisi lähteä. Kysymys esitetään
  * samalle sovitukselle kuin lähtökin, vain parillisuus käännettynä.
  */
-function canArrive(library: PieceLibrary, frame: Frame): boolean {
+export function canArrive(library: PieceLibrary, frame: Frame): boolean {
   return canAttach(library, { ...frame, open: complementOf(frame.open) })
 }
 
@@ -527,6 +551,39 @@ function alongSection(section: Section, point: Vec): number {
   if (lengthSq === 0) return 0
   const t = ((point.x - section.start.x) * dx + (point.y - section.start.y) * dy) / lengthSq
   return Math.max(0, Math.min(1, t)) * Math.sqrt(lengthSq)
+}
+
+/**
+ * Radan avoimet päät haarakohtina. Jatko ei lisää vaihdetta eikä muuta rataa
+ * mitenkään — se vain jatkaa kiskoa siitä mihin se loppui — joten "haarakohta"
+ * on tässä pelkkä valmis kehys. Sama koneisto sovittaa sen kuin varsinaisen
+ * haaran, ja siksi jatkokin osaa ratkaista matkalle osuvan risteämän.
+ *
+ * Jatko on **oletus radan pään vieressä**: siellä käyttäjä lähes aina jatkaa
+ * rataa eikä työnnä vaihdetta viereen. Hyvitys pitää sen selvänä voittajana,
+ * jolloin valinta menee läpi ilman kysymystä; haaran saa yhä aloittamalla vedon
+ * kauempaa päästä.
+ */
+export function endAnchors(track: TrackChain, library: PieceLibrary, point: Vec, snapMm: number): BranchAnchor[] {
+  return freeEnds(track, library)
+    .map((end) => ({ end, offsetMm: Math.hypot(end.frame.x - point.x, end.frame.y - point.y) }))
+    .filter(({ end, offsetMm }) => offsetMm <= snapMm && canAttach(library, end.frame))
+    .sort((a, b) => a.offsetMm - b.offsetMm)
+    .map(({ end, offsetMm }) => ({
+      kind: 'end' as const,
+      junctionId: track.pieces[end.index].pieceId,
+      portId: end.portId,
+      frame: end.frame,
+      pieces: [...track.pieces],
+      joints: track.joints.map(([a, b]) => [a, b] as [number, number]),
+      junctionIndex: end.index,
+      gapMm: 0,
+      localJoints: [],
+      added: {},
+      removed: {},
+      offsetMm,
+      cost: offsetMm - CONTINUE_BONUS,
+    }))
 }
 
 /**

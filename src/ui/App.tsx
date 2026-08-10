@@ -13,6 +13,7 @@ import {
   type ExtendReason,
 } from '../edit'
 import { fitDrawing } from '../fit'
+import type { Track } from '../gen/build'
 import { generate, type GenerateResult } from '../gen/generate'
 import { t } from '../i18n'
 import {
@@ -224,18 +225,43 @@ export function App() {
     setChoice(solveChoice(options))
   }, [section, track, editOptions, selectSection])
 
-  /** "Poista": osio purkautuu ja jättää aukkomerkin (README luku 6). */
+  /**
+   * "Poista". Radan keskeltä poisto jättää aukkomerkin ja kysyy mitä sille
+   * tehdään (README luku 6); radan päästä se toteutuu suoraan, koska kiskonpään
+   * takana ei ole aukkoa vaan pelkkä lattia.
+   */
   const handleRemove = useCallback(() => {
     if (!section || !track) return
     setDrawMode(false)
     setChoice(null)
     const removed = removeSection(track, section.section, editOptions)
-    if (!removed.track || !removed.gap) {
+    if (!removed.track) {
       selectSection(section.section, { kind: 'fill', reason: removed.reason === 'ok' ? 'no-fill' : removed.reason })
       return
     }
-    setRemoval({ preview: removed.track, gap: removed.gap })
+    if (removed.gap) {
+      setRemoval({ preview: removed.track, gap: removed.gap })
+      return
+    }
+    applyRemoval(removed.track, section.brief.freed, section.section.indices.length)
   }, [section, track, editOptions, selectSection])
+
+  /** Poisto lopputuloksena: palat pois, rata jää lyhyemmäksi ja työ jatkuu muualta. */
+  const applyRemoval = useCallback((next: Track, freed: Record<string, number>, pieceCount: number) => {
+    setRemoval(null)
+    setSection(null)
+    setDrawing(null)
+    setChoice(null)
+    setEdited({
+      track: next,
+      kind: 'remove',
+      label: t('section.remove'),
+      pieceCount,
+      deviationMm: 0,
+      withinInventory: Object.keys(next.shortages).length === 0,
+      change: netChange({}, freed),
+    })
+  }, [])
 
   /** Aukon automaattinen täyttö Solverilla. */
   const handleFillGap = useCallback(() => {
@@ -384,6 +410,9 @@ export function App() {
             onSolve={handleSolve}
             onRemove={handleRemove}
             onFillGap={handleFillGap}
+            onKeepGap={() => {
+              if (removal) applyRemoval(removal.preview, removal.gap.freed, section?.section.indices.length ?? 0)
+            }}
             onUndoRemove={() => setRemoval(null)}
             onHandleMove={handleHandleMove}
             onSeedChange={startOver}

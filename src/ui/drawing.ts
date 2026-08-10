@@ -52,7 +52,7 @@ export interface RemovalState {
 }
 
 /** Mikä muokkaus radalle viimeksi tehtiin. */
-export type EditKind = 'replace' | 'branch' | 'variation' | 'swap' | 'fill'
+export type EditKind = 'replace' | 'branch' | 'continue' | 'variation' | 'swap' | 'fill' | 'remove'
 
 /** Käsin muokattu rata. Elää generoidun ja piirretyn rinnalla, joten paluu on aina auki. */
 export interface EditState {
@@ -102,7 +102,9 @@ export function branchChoice(options: readonly BranchOption[], points: Point[]):
   return {
     points,
     options: options.map((option) => ({
-      kind: 'branch' as const,
+      // Radan päästä jatkaminen ei ole haara vaan jatko, ja statusrivi sanoo sen
+      // eri sanoin: mitään ei haarautunut, kisko vain jatkui.
+      kind: option.kind === 'end' ? ('continue' as const) : ('branch' as const),
       label: describeBranchOption(option),
       track: option.track,
       addedIndices: option.addedIndices,
@@ -260,6 +262,8 @@ export function describeBranchOption(option: BranchOption): string {
   if (option.crossing !== 'none') {
     return t(`branch.option.${option.crossing}`, { piece: option.junctionId, crossing: option.crossingId ?? '' })
   }
+  // Jatko ei lisää vaihdetta, joten palan tunnus ei kerro siitä mitään.
+  if (option.kind === 'end') return t('branch.option.continue')
   if (option.variant === 'rejoin') {
     return t('branch.option.rejoin', { piece: option.junctionId, rejoin: option.rejoinId ?? '' })
   }

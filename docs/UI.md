@@ -63,6 +63,22 @@ Toimintorivi on nyt nelipaikkainen (Piirrä · Tyhjennä · Generoi · Tulos), m
 puhelimen leveydellä maksimi: nimet on pidettävä yhden sanan mittaisina, ja siksi
 "Generoi uudelleen" lyheni muotoon "Generoi".
 
+## Valinnan mittasuhteet
+
+Kaksi lukua ratkaisee, näkyykö valittu osuus lainkaan sormien alta.
+
+**Zoomauksen minimi.** Valinta zoomaa osuuteen (README luku 7), mutta lyhyttä
+osuutta ei kannata suurentaa ruudun kokoiseksi: yhden palan valinta on
+nimenomaan se hetki, jolloin ympäristö ratkaisee — "mihin tämä pala liittyy" on
+koko kysymys. Zoomattavan alan minimi on viisi loogista solua (1080 mm); kolme
+solua vei liian lähelle, jolloin pala täytti ruudun eikä radasta nähnyt mitään.
+
+**Kahvan koko.** Kahva mitoitetaan ruudulla, ei maailmassa, ja sen halkaisija on
+sormimitoituksen minimi. Suhdeluku oli aluksi kaksinkertainen, jolloin nuppi oli
+halkaisijaltaan ~88 px ja peitti puolet valitusta osuudesta. Osuma-alue on
+nuppia reilusti isompi eikä sitä pienennetty, joten pienempi nuppi ei tee
+osumisesta vaikeampaa — se vain päästää näkemään mihin osui.
+
 ## Pyöritys on esitystason asia
 
 Pystyssä olevalla puhelimella vaakasuuntainen lattia jäisi kapeaksi kaistaleeksi ruudun

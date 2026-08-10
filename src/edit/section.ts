@@ -68,6 +68,46 @@ export interface Section {
   replaceable: boolean
 }
 
+/** Radan avoin pää: portti, johon ei ole liitetty mitään. */
+export interface FreeEnd {
+  /** Palan indeksi radalla. */
+  index: number
+  portId: string
+  /** Kehys ulospäin: uusi ketju jatkuu tästä. */
+  frame: Frame
+}
+
+/**
+ * Radan avoimet päät. Näitä on kolmenlaisia, ja kaikki kolme ovat sama asia
+ * lattialla: kiskonpää johon voi työntää lisää rataa — piirretyn radan pää,
+ * piirretyn haaran vapaa pää ja vaihteen käyttämättä jäänyt haaraportti.
+ *
+ * Ilman tätä koodi ei tuntenut radan päitä lainkaan: piirto niiden vierestä
+ * luki tilanteen haaraksi ja työnsi vaihteen viereen, ja poisto luuli päätä
+ * porttipariksi jonka väliin jää aukko.
+ */
+export function freeEnds(track: TrackChain, library: PieceLibrary): FreeEnd[] {
+  const neighbours = neighbourLists(track)
+  const ends: FreeEnd[] = []
+
+  track.pieces.forEach((placed, index) => {
+    const piece = library.get(placed.pieceId)
+    for (const port of placedPorts(placed, piece)) {
+      const joined = neighbours[index].some((other) =>
+        touches(track, library, other, { x: port.x, y: port.y, dir: port.dir, level: port.levelOffset, open: port.connector }),
+      )
+      if (joined) continue
+      ends.push({
+        index,
+        portId: port.id,
+        frame: { x: port.x, y: port.y, dir: port.dir, level: port.levelOffset, open: port.connector },
+      })
+    }
+  })
+
+  return ends
+}
+
 /** Naapuriluettelo liitoksista: pala -> siihen liitetyt palat. */
 export function neighbourLists(track: TrackChain): number[][] {
   const lists = track.pieces.map(() => [] as number[])

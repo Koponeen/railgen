@@ -6,6 +6,7 @@ import { summariseTrack, type Track } from '../gen/build'
 import { generate } from '../gen/generate'
 import { areaBounds, buildMask, type AreaShape } from '../gen/mask'
 import {
+  freeEnds,
   handlePoint,
   makeSection,
   naturalSection,
@@ -57,6 +58,66 @@ export function buildLoop(ids: readonly string[] = LOOP_IDS): Track {
     library,
   )
 }
+
+/**
+ * Avoin ketju: rata, jolla on kaksi vapaata päätä. Piirretty rata ja piirretty
+ * haara ovat tällaisia, ja juuri niiden päät ovat se paikka jossa työtä
+ * jatketaan. Kaaren kääntösuunnan saa valittua peilauksella.
+ */
+export function buildChain(steps: readonly { id: string; mirror?: boolean }[]): Track {
+  let cursor = startFrame(600, 600, 0, 0, 'pin')
+  const pieces: PlacedPiece[] = []
+  for (const step of steps) {
+    const result = placeAtFrame(library.get(step.id), cursor, { mirror: step.mirror })
+    if (!result) throw new Error(`could not place ${step.id}`)
+    pieces.push(result.placed)
+    cursor = result.exit
+  }
+
+  const joints: [number, number][] = []
+  for (let i = 1; i < pieces.length; i += 1) joints.push([i - 1, i])
+
+  const usage: Record<string, number> = {}
+  for (const placed of pieces) usage[placed.pieceId] = (usage[placed.pieceId] ?? 0) + 1
+
+  return summariseTrack(
+    {
+      pieces,
+      joints,
+      closure: evaluateClosure(
+        jointsForChain(
+          pieces.map((placed) => library.get(placed.pieceId)),
+          false,
+        ),
+        { gapMm: 0, angleDeg: 0 },
+      ),
+      usage,
+      shortages: {},
+      areaBounds: areaBounds(buildMask(AREA)),
+    },
+    library,
+  )
+}
+
+describe('freeEnds', () => {
+  it('finds both ends of an open track and nothing on a closed loop', () => {
+    expect(freeEnds(buildLoop(), library)).toEqual([])
+    const ends = freeEnds(buildChain([{ id: 'D' }, { id: 'D' }, { id: 'D' }]), library)
+    expect(ends).toHaveLength(2)
+  })
+
+  it('reports one end of each connector gender: a chain runs socket to pin', () => {
+    const ends = freeEnds(buildChain([{ id: 'D' }, { id: 'D' }, { id: 'D' }]), library)
+    expect(new Set(ends.map((end) => end.frame.open))).toEqual(new Set(['socket', 'pin']))
+  })
+
+  it('counts a switch branch port nobody attached to as a free end', () => {
+    // Kolmisuuntaisen vaihteen käyttämätön haara on lattialla sama asia kuin
+    // radan pää: kiskonpää, johon voi työntää lisää rataa.
+    const ends = freeEnds(buildChain([{ id: 'D' }, { id: 'I' }, { id: 'D' }]), library)
+    expect(ends.filter((end) => end.portId.startsWith('branch'))).toHaveLength(2)
+  })
+})
 
 describe('naturalSection', () => {
   it('selects the whole run of straights around the tapped piece', () => {

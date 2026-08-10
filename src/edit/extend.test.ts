@@ -4,7 +4,8 @@ import { defaultLibrary } from '../core/library'
 import { entryFrame, exitFrame } from '../core/pieces'
 import type { Vec } from '../core/vec'
 import { countCollisions, type Track } from '../gen/build'
-import { AREA, buildLoop } from './section.test'
+import { freeEnds } from './section'
+import { AREA, buildChain, buildLoop } from './section.test'
 import { extendTrack, newPieceIndices, type BranchOption } from './extend'
 
 const library = defaultLibrary()
@@ -246,6 +247,81 @@ describe('extendTrack across the track', () => {
     }
   })
 })
+
+describe('extendTrack from a free end', () => {
+  /**
+   * Radan pään vieressä veto on jatko eikä uusi haara. Ilman tätä koodi työnsi
+   * vaihteen kiskonpään viereen ja haaroitti siitä — vastaus kysymykseen, jota
+   * kukaan ei esittänyt.
+   */
+  const CHAIN = [{ id: 'D' }, { id: 'D' }, { id: 'D' }, { id: 'D' }]
+
+  function fromEnd(track: Track, open: 'pin' | 'socket'): Vec[] {
+    const end = freeEnds(track, library).find((candidate) => candidate.frame.open === open)
+    if (!end) throw new Error(`no ${open} end`)
+    const away = end.frame.dir === 0 ? 1 : -1
+    return stroke({ x: end.frame.x, y: end.frame.y }, { x: end.frame.x + 700 * away, y: end.frame.y + 100 })
+  }
+
+  it('continues the chain instead of branching next to it', () => {
+    const track = buildChain(CHAIN)
+    const result = extendTrack(track, fromEnd(track, 'pin'), { area: AREA })
+
+    expect(result.reason).toBe('ok')
+    expect(result.options[0].kind).toBe('end')
+    // Jatko ei lisää vaihdetta eikä pura mitään: rata vain pitenee.
+    expect(result.options[0].removed).toEqual({})
+  })
+
+  it('does it without asking: next to a rail end that is what the stroke means', () => {
+    const track = buildChain(CHAIN)
+    expect(extendTrack(track, fromEnd(track, 'pin'), { area: AREA }).automatic).toBe(true)
+  })
+
+  it('continues the socket end too, building the chain towards the rail end', () => {
+    // Ketju kulkee kolosta tappiin, joten koloportista jatkaminen rakentaa
+    // ketjun toisin päin. Piirretyllä radalla on aina yksi kumpaakin päätä.
+    const track = buildChain(CHAIN)
+    const result = extendTrack(track, fromEnd(track, 'socket'), { area: AREA })
+
+    expect(result.reason).toBe('ok')
+    expect(result.options[0].kind).toBe('end')
+    expect(result.options[0].track.pieces.length).toBeGreaterThan(track.pieces.length)
+  })
+
+  it('joins what it adds: no continued piece is left loose', () => {
+    for (const open of ['pin', 'socket'] as const) {
+      const track = buildChain(CHAIN)
+      const [option] = extendTrack(track, fromEnd(track, open), { area: AREA }).options
+      const degree = new Map<number, number>()
+      for (const [a, b] of option.track.joints) {
+        degree.set(a, (degree.get(a) ?? 0) + 1)
+        degree.set(b, (degree.get(b) ?? 0) + 1)
+      }
+      for (const index of option.addedIndices) expect(degree.get(index) ?? 0).toBeGreaterThan(0)
+      expectIntact(track, option)
+    }
+  })
+
+  it('still branches when the stroke starts away from the end', () => {
+    // Kauempaa aloitettu veto on yhä haara: jatko on oletus vain pään vieressä.
+    // Kaaret rajaavat suoran osuuden, jolle vaihde mahtuu.
+    const track = buildChain([{ id: 'D' }, { id: 'E' }, { id: 'E' }, ...CHAIN, { id: 'E' }, { id: 'E' }, { id: 'D' }])
+    const start = midOfPiece(track, 4)
+    const result = extendTrack(track, stroke(start, { x: start.x, y: start.y + 700 }), { area: AREA })
+
+    expect(result.reason).toBe('ok')
+    expect(result.options.every((option) => option.kind !== 'end')).toBe(true)
+  })
+})
+
+function midOfPiece(track: Track, index: number): Vec {
+  const placed = track.pieces[index]
+  const piece = library.get(placed.pieceId)
+  const entry = entryFrame(placed, piece)
+  const exit = exitFrame(placed, piece)
+  return { x: (entry.x + exit.x) / 2, y: (entry.y + exit.y) / 2 }
+}
 
 describe('extendTrack back onto the track', () => {
   /**

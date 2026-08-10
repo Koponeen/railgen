@@ -143,6 +143,24 @@ eksplisiittinen ja lyhytikäinen tila kuin vapaassa piirrossa — yksi veto, ja
 kaksi sormea peruu ja navigoi. Kahvan päältä alkava veto on aina osion
 venytystä, ei kartan siirtoa.
 
+### Poisto: radan keskeltä kysytään, päästä ei
+
+Poisto on kahta eri asiaa sen mukaan mihin se osuu.
+
+**Radan keskeltä** poisto jättää aukon: kaksi avointa päätyporttia ja mitta
+niiden välillä. Aukko on kysymys, ja siihen on neljä vastausta — jätä auki,
+täytä Solverilla, piirrä tilalle tai kumoa. "Jätä auki" on niistä
+lopputulos: avoin rata on rata siinä missä silmukkakin, ja ilman sitä
+poistosta ei koskaan tullut valmista — jokainen nappi vain palautti palat
+takaisin.
+
+**Radan päästä** poisto toteutuu suoraan. Siellä ei ole aukkoa vaan kiskonpää,
+joka siirtyy taaksepäin, eikä siitä ole mitään kysyttävää. Osio tunnistetaan
+radan pääksi siitä, että sen toisella puolella ei ole naapuria
+(`section.before` tai `section.after` on null). Ilman tätä eroa piirretyn
+haaran päätä ei saanut poistettua lainkaan: koodi luki vapaan pään
+porttipariksi, valitti aukosta ja tarjosi vain sen täyttämistä takaisin.
+
 Onnistunut korvaus purkaa valinnan (indeksit viittaisivat vanhaan rataan) ja
 jättää muokatun radan näkyviin. Ilman valintaa radan vierestä alkava veto ei ole
 korvaus vaan uusi haara (`docs/BRANCHING.md`). Muokattu rata syrjäyttää generoidun ja

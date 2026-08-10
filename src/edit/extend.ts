@@ -15,10 +15,10 @@ import type { Track } from '../gen/build'
 import { buildElementLibrary, bundledElementSpecs, type ElementLibrary } from '../gen/elements'
 import { areaBounds, buildMask, type AreaShape } from '../gen/mask'
 import { assembleTrack, countUsage } from './assemble'
-import { branchAnchors, BRANCH_SNAP_MM, type BranchAnchor } from './branch'
+import { branchAnchors, canArrive, endAnchors, BRANCH_SNAP_MM, CONTINUE_BONUS, type BranchAnchor } from './branch'
 import { bridgeOver, findCrossings, levelCrossings, type CrossingSite } from './crossing'
 import { relaxSection } from './replace'
-import type { TrackChain } from './section'
+import { freeEnds, type TrackChain } from './section'
 
 // Lisäävä piirto (README luku 5 "Haara mutkaan", luku 6 "risteämiskyselyt").
 // Radan vierestä alkava veto ei ole uusi rata vaan uusi haara: se etsii
@@ -198,13 +198,6 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
   if (!points) return failure('not-on-track')
 
   const table = inventoryFillTable(library, inventory)
-  // Osoitettuun kohtaan ei aina mahdu vaihdetta. Silloin etsitään lähin
-  // mahdollinen haarakohta kauempaa sen sijaan että kieltäydyttäisiin.
-  const anchors =
-    findAnchors(track, library, table, inventory, points[0], snapMm) ||
-    findAnchors(track, library, table, inventory, points[0], snapMm * FALLBACK_SNAP_FACTOR)
-  if (!anchors) return failure('no-branch-point')
-
   const context: Context = {
     track,
     library,
@@ -215,7 +208,21 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
     options,
   }
 
-  const built: BranchOption[] = []
+  // Radan koloportti jatkuu toisin päin kuin tappiportti, joten se ei kulje
+  // haarakohtien kanssa samaa reittiä — ja se on olemassa myös silloin kun
+  // yhtään haarakohtaa ei löydy.
+  const built: BranchOption[] = backwardOptions(context, points, snapMm)
+
+  // Osoitettuun kohtaan ei aina mahdu vaihdetta. Silloin etsitään lähin
+  // mahdollinen haarakohta kauempaa sen sijaan että kieltäydyttäisiin.
+  const anchors =
+    findAnchors(track, library, table, inventory, points[0], snapMm) ||
+    findAnchors(track, library, table, inventory, points[0], snapMm * FALLBACK_SNAP_FACTOR)
+  if (!anchors) {
+    if (built.length === 0) return failure('no-branch-point')
+    return { options: rank(built, options.maxOptions ?? 3), reason: 'ok', automatic: true }
+  }
+
   let firstReason: ExtendReason | null = null
 
   // Päättyykö veto radalle? Silloin käyttäjä ei piirtänyt umpiperää vaan
@@ -297,12 +304,13 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
 function fitLeg(
   context: Context,
   base: readonly PlacedPiece[],
-  start: Frame,
+  /** Kiinnitetty aloituskehys, tai null kun vain maali on kiinnitetty. */
+  start: Frame | null,
   points: readonly Vec[],
   goal: Frame | null,
 ): BeamFit[] {
   if (points.length < 2 || polylineLength(points) < MIN_LEG_MM) return []
-  const anchored = [{ x: start.x, y: start.y }, ...points.slice(1)]
+  const anchored = start ? [{ x: start.x, y: start.y }, ...points.slice(1)] : [...points]
   if (goal) anchored[anchored.length - 1] = { x: goal.x, y: goal.y }
 
   return beamFit(buildTarget({ points: anchored, closed: false, lengthMm: polylineLength(anchored) }), {
@@ -310,15 +318,19 @@ function fitLeg(
     inventory: minus(context.inventory, countUsage(base)),
     tuning: { ...BRANCH_TUNING, ...context.options.tuning },
     allowConnectorFlip: context.options.allowConnectorFlip,
-    start: [start],
+    start: start ? [start] : undefined,
     goal: goal ? { frame: goal, toleranceMm: GOAL_TOLERANCE_MM } : undefined,
   })
 }
 
 interface Leg {
   pieces: PlacedPiece[]
-  /** Mihin pohjaradan palaan jakson ensimmäinen pala liittyy. */
-  from: number
+  /**
+   * Mihin pohjaradan palaan jakson ensimmäinen pala liittyy. Puuttuu, kun jakso
+   * kiinnittyy vain lopustaan — radan koloportista taaksepäin jatkettaessa
+   * ketju rakennetaan lattialta kiskonpäätä kohti.
+   */
+  from?: number
   /** Mihin pohjaradan palaan jakson viimeinen pala liittyy (risteyksen kohdalla). */
   to?: number
 }
@@ -371,7 +383,7 @@ function attach(
     pieces.push(...leg.pieces.map((placed) => ({ ...placed, placement: { ...placed.placement } })))
     branchCount += leg.pieces.length
     for (let i = first + 1; i < pieces.length; i += 1) legJoints.push([i - 1, i])
-    legJoints.push([leg.from, first])
+    if (leg.from !== undefined) legJoints.push([leg.from, first])
     if (leg.to !== undefined) legJoints.push([pieces.length - 1, leg.to])
   }
   if (branchCount === 0) return { option: null, reason: 'no-fit' }
@@ -414,7 +426,11 @@ function attach(
 
 // --- Haarakohdan haku --------------------------------------------------------
 
-/** Haarakohdat annetulla nappausetäisyydellä, tai null jos niitä ei ole yhtään. */
+/**
+ * Haarakohdat annetulla nappausetäisyydellä, tai null jos niitä ei ole yhtään.
+ * Radan avoimet päät tulevat mukaan ensimmäisinä: kiskonpään vieressä veto on
+ * lähes aina jatko eikä uusi haara sen viereen.
+ */
 function findAnchors(
   track: TrackChain,
   library: PieceLibrary,
@@ -423,8 +439,76 @@ function findAnchors(
   point: Vec,
   snapMm: number,
 ): BranchAnchor[] | null {
-  const anchors = branchAnchors(track, library, table, inventory, point, { snapMm, limit: MAX_ANCHORS })
-  return anchors.length > 0 ? anchors : null
+  const anchors = [
+    ...endAnchors(track, library, point, snapMm),
+    ...branchAnchors(track, library, table, inventory, point, { snapMm, limit: MAX_ANCHORS }),
+  ]
+  return anchors.length > 0 ? anchors.slice(0, MAX_ANCHORS) : null
+}
+
+/**
+ * Jatko radan **koloportista**. Ketju kulkee aina kolosta tappiin, joten
+ * koloporttiin päättyvää rataa ei voi jatkaa eteenpäin samalla tavalla kuin
+ * tappiporttia: ketju on rakennettava lattialta kiskonpäätä kohti ja
+ * kiinnitettävä vasta lopustaan.
+ *
+ * Piirretyllä radalla on aina tasan yksi kumpaakin päätä, joten ilman tätä
+ * puolet radan päistä ei jatkuisi lainkaan — ja juuri ne päät olisivat niitä,
+ * joiden viereen koodi työntäisi vaihteen.
+ */
+function backwardOptions(context: Context, points: readonly Vec[], snapMm: number): BranchOption[] {
+  const { track, library } = context
+  const results: BranchOption[] = []
+  // Veto on jo käännetty niin, että sen alku on radalla; taaksepäin
+  // rakennettava ketju kulkee toisin päin.
+  const reversed = [...points].reverse()
+
+  for (const end of freeEnds(track, library)) {
+    if (!canArrive(library, end.frame)) continue
+    if (Math.hypot(end.frame.x - points[0].x, end.frame.y - points[0].y) > snapMm) continue
+
+    const goal = arrivalAt(end.frame)
+    for (const fit of fitLeg(context, track.pieces, null, reversed, goal).slice(0, MAX_FITS)) {
+      const gap: Vec = { x: fit.end.x - goal.x, y: fit.end.y - goal.y }
+      const legPieces = fit.pieces.map((placed) => ({ ...placed, placement: { ...placed.placement } }))
+      relaxSection(legPieces, gap)
+
+      const attached = attach(context, endAnchorFor(track, end.index, end.portId, end.frame), [
+        { pieces: legPieces, to: end.index },
+      ], {
+        crossing: 'none',
+        crossingId: null,
+        deviation: fit.deviation,
+        extraCost: fit.cost,
+        gapMm: Math.hypot(gap.x, gap.y),
+        localiseLegs: true,
+      })
+      if (attached.option) {
+        results.push(attached.option)
+        break
+      }
+    }
+  }
+  return results
+}
+
+/** Pseudohaarakohta radan päähän: jatko ei lisää vaihdetta eikä muuta rataa. */
+function endAnchorFor(track: Track, index: number, portId: string, frame: Frame): BranchAnchor {
+  return {
+    kind: 'end',
+    junctionId: track.pieces[index].pieceId,
+    portId,
+    frame,
+    pieces: [...track.pieces],
+    joints: track.joints.map(([a, b]) => [a, b] as [number, number]),
+    junctionIndex: index,
+    gapMm: 0,
+    localJoints: [],
+    added: {},
+    removed: {},
+    offsetMm: 0,
+    cost: -CONTINUE_BONUS,
+  }
 }
 
 // --- Yhdistävä haara ---------------------------------------------------------

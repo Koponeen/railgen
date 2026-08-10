@@ -119,6 +119,8 @@ Säätökohteet: siksak-sakko (suunnanvaihdoista sakotetaan), 45°-lokerointi, t
 
 **Haara mutkaan** (piirto osuu kaarelle): kaaret ovat jäykkiä pisteitä, suorat liukuvia ankkurivyöhykkeitä (vaihde voi asettua suoralle mihin kohtaan vain uudelleentäytöllä). Ehdokkaat: suora ennen mutkaa, suora mutkan jälkeen, kaaren vaihto haaroittavaan (H3/O/P/I/J, pakkosuunta). Jos yksi voittaa selvästi → automaattinen; muuten **haamuesikatselut kartalla** (2–3 vaihtoehtoa, napautus valitsee). Jos mikään ei kelpaa → syy + lähin mahdollinen haarakohta. Nappausetäisyys ~1 solu.
 
+**Radan pään vieressä veto on jatko, ei haara.** Kiskonpäähän ei tarvita vaihdetta; se tarvitaan vain kun rata haarautuu keskeltä. Jatko on siis oletus radan avoimen pään ympärillä (~1 solu), ja haaran saa aloittamalla vedon kauempaa. Radan kaksi päätä jatkuvat eri tavoin, koska ketju kulkee kolosta tappiin.
+
 **Haaran toinen pää.** Veto, joka *päättyy* radalle, on ohituskaide eikä umpiperä: se saa vaihteen molempiin päihinsä ja aidon liitoksen kumpaankin. Päät eivät ole symmetriset, koska ketju kulkee kolosta tappiin — lähtöporttien ja päätösporttien palat ovat eri palat (L/M/T vastaan J/P). Umpiperä tarjotaan silti rinnalla: kumpi niistä, on käyttäjän valinta.
 
 **Vajaa vastaus ennen kieltäytymistä.** Kun ylitykselle ei löydy risteystä eikä siltaa, vedosta toteutetaan se osa joka on toteutettavissa: haara pysähtyy ennen rataa. Vasta jos sekään ei mahdu, kerrotaan syy.
@@ -143,7 +145,9 @@ Säätökohteet: siksak-sakko (suunnanvaihdoista sakotetaan), 45°-lokerointi, t
 
 Pisteytys: monipuolisuus (uusi elementtityyppi = bonus), inventaario, joustobudjetti. Esitys: 2–4 haamuesikatselua + palamuutoskortti ("käyttää 1×L, 1×M · vapauttaa 1×D"). Valinnan venytys mutkien yli muuttaa päätysuuntia → radikaalimpia ehdotuksia.
 
-**Palan napautus** → "vaihda toiseen" -lista saman porttisignatuurin toteutuksista. **Poisto** jättää aukkomerkin: täytä automaattisesti (Solver) / piirrä tilalle / kumoa.
+**Palan napautus** → "vaihda toiseen" -lista saman porttisignatuurin toteutuksista. **Poisto** radan keskeltä jättää aukkomerkin: jätä auki / täytä automaattisesti (Solver) / piirrä tilalle / kumoa. Radan päästä poisto toteutuu suoraan — siellä ei ole aukkoa vaan kiskonpää, joka siirtyy taaksepäin.
+
+**Suoristus**: mutkittelevalle osuudelle, jonka päät ovat samalla linjalla, tarjotaan vaihtoehtona suora. Se on usein se mitä mutkalta haetaan, eikä sitä ole kuviokirjastossa.
 
 **Yhtenäinen kuvio**: kaikki epäselvyydet (haaran paikka, risteämän tyyppi, autosolver) ratkaistaan haamuesikatseluilla kartalla, ei dialogeilla.
 
@@ -253,8 +257,12 @@ Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
   yhdistävä haara (vaihde molempiin päihin), vaihteen upotus myös liitinparillisuuden
   vaihtavalle osuudelle ja vajaa vastaus kieltäytymisen sijaan. Ks. `docs/BRANCHING.md`
   ja `docs/UI.md`.
+- **Vaihe 7** (radan päät): avoin pää tunnistetaan (`freeEnds`), sen vieressä veto jatkaa
+  rataa eikä haaroita, poisto radan päästä toteutuu suoraan ja keskelle jäävän aukon saa
+  jättää auki; mutkittelevalle osuudelle tarjotaan suoraa. Ks. `docs/EDITING.md`,
+  `docs/VARIATIONS.md` ja `docs/BRANCHING.md`.
 
-Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2–6 tuovat piirron,
+Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2–7 tuovat piirron,
 muokkauksen ja autosolverin sen päälle.
 
 Palakirjasto kattaa suorat sukupuolivariantteineen, kaaret, rampit, sillan kannet,

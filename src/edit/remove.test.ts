@@ -2,11 +2,47 @@ import { describe, expect, it } from 'vitest'
 import { createInventory } from '../core/inventory'
 import { defaultLibrary } from '../core/library'
 import { generate } from '../gen/generate'
-import { AREA, buildLoop } from './section.test'
+import { AREA, buildChain, buildLoop } from './section.test'
 import { fillGap, removeSection } from './remove'
 import { makeSection, naturalSection, neighbourLists } from './section'
 
 const library = defaultLibrary()
+
+describe('removeSection at a free end', () => {
+  /**
+   * Radan päässä ei ole aukkoa vaan kiskonpää, joka siirtyy taaksepäin. Ilman
+   * tätä eroa piirretyn haaran päätä ei saanut poistettua lainkaan: koodi luki
+   * vapaan pään porttipariksi ja tarjosi vain aukon täyttämistä takaisin.
+   */
+  const CHAIN = [{ id: 'D' }, { id: 'D' }, { id: 'E' }, { id: 'D' }, { id: 'D' }]
+
+  it('leaves no gap to answer: the removal is the answer', () => {
+    const track = buildChain(CHAIN)
+    const section = naturalSection(track, library, 4)
+    if (!section) throw new Error('no section')
+    expect(section.after).toBeNull()
+
+    const removed = removeSection(track, section, { area: AREA })
+    expect(removed.reason).toBe('ok')
+    expect(removed.gap).toBeNull()
+    expect(removed.track?.pieces.length).toBe(track.pieces.length - section.indices.length)
+  })
+
+  it('gives back the pieces it took off', () => {
+    const track = buildChain(CHAIN)
+    const section = naturalSection(track, library, 4)
+    if (!section) throw new Error('no section')
+    const removed = removeSection(track, section, { area: AREA })
+    expect(removed.track?.usage.D).toBe((track.usage.D ?? 0) - 2)
+  })
+
+  it('still asks about a gap in the middle of the track', () => {
+    const track = buildLoop()
+    const section = naturalSection(track, library, 1)
+    if (!section) throw new Error('no section')
+    expect(removeSection(track, section, { area: AREA }).gap).not.toBeNull()
+  })
+})
 
 describe('removeSection', () => {
   it('leaves a gap marked by the two end ports', () => {

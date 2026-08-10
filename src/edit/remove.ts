@@ -13,11 +13,16 @@ import type { Section } from './section'
 // Poisto (README luku 6): "Poisto jättää aukkomerkin: täytä automaattisesti
 // (Solver) / piirrä tilalle / kumoa."
 //
-// Poisto on siis **välitila, ei lopputulos**. Rata ilman osiotaan ei ole ehjä
-// rata, joten poisto ei tuota valmista rataa vaan aukkomerkin: kaksi avointa
-// päätyporttia ja mitta niiden välillä. Käyttäjä ratkaisee aukon jollain
-// kolmesta tavasta, ja kaikki kolme lähtevät alkuperäisestä radasta —
-// muokattavaa "rikkinäistä" välitilaa ei ole olemassa (CLAUDE.md).
+// Radan **keskeltä** poistaminen on siis välitila eikä lopputulos: keskelle jää
+// kaksi avointa päätyporttia ja mitta niiden välillä, ja käyttäjä ratkaisee
+// aukon. Kaikki tavat lähtevät alkuperäisestä radasta — muokattavaa
+// "rikkinäistä" välitilaa ei ole olemassa (CLAUDE.md).
+//
+// Radan **päästä** poistaminen on eri asia: siellä ei ole aukkoa vaan kiskonpää,
+// joka vain siirtyy taaksepäin. Sitä ei ole mitään syytä kysyä, joten poisto
+// päästä toteutuu suoraan. Ilman tätä eroa piirretyn haaran päätä ei saanut
+// poistettua lainkaan: koodi luki vapaan pään porttipariksi, valitti aukosta ja
+// tarjosi vain sen täyttämistä takaisin.
 
 export type RemoveReason = 'ok' | 'section-not-removable'
 
@@ -33,10 +38,15 @@ export interface GapMarker {
 
 export interface RemoveResult {
   /**
-   * Rata ilman osiota. Tämä on **esikatselu**: aukko on merkitty erikseen eikä
-   * radan päitä ole liitetty toisiinsa.
+   * Rata ilman osiota. Radan keskeltä poistettaessa tämä on **esikatselu**:
+   * aukko on merkitty erikseen eikä radan päitä ole liitetty toisiinsa. Päästä
+   * poistettaessa se on valmis rata sellaisenaan.
    */
   track: Track | null
+  /**
+   * Aukko radan keskellä, tai null jos poisto osui radan päähän. Null tarkoittaa
+   * että kysyttävää ei ole: `track` on valmis vastaus.
+   */
   gap: GapMarker | null
   reason: RemoveReason
 }
@@ -118,9 +128,16 @@ export function removeSection(track: Track, section: Section, options: RemoveOpt
       fitsArea: bbox.minX >= bounds.minX && bbox.minY >= bounds.minY && bbox.maxX <= bounds.maxX && bbox.maxY <= bounds.maxY,
       collisions: countCollisions(pieces, library, joints),
     },
-    gap: { start: section.start, end: section.end, lengthMm, freed },
+    // Osio radan päässä ei jätä aukkoa vaan lyhentää rataa: sen toisella
+    // puolella ei ole mitään mihin liittyä.
+    gap: atFreeEnd(section) ? null : { start: section.start, end: section.end, lengthMm, freed },
     reason: 'ok',
   }
+}
+
+/** Onko osio radan päässä? Silloin sen toisella puolella ei ole naapuria. */
+export function atFreeEnd(section: Section): boolean {
+  return section.before === null || section.after === null
 }
 
 /**
