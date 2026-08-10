@@ -162,6 +162,31 @@ tarjoavat kolon. Haarakohtien haku tekee siis saman kysymyksen kahteen suuntaan
 Päätyheitto jaetaan haaran **omille liitoksille** samalla mallilla kuin osion
 korvauksessa, joten kumpikaan vaihde ei liiku.
 
+#### Miksi toinen pää on aina kolmihaarainen — ja mikä sen korjaisi
+
+Saapumispäähän kelpaa vain pala, jonka haaraportti on **kolo**. Suoralle
+osuudelle upotettavista vaihteista sellaisia on tasan kaksi: `J`
+(kolmisuuntainen) ja `X` (tähtiristeys). Kummallakin jää käyttämätön suunta,
+joten radalle asti piirretty haara saa toiseen päähänsä vaihteen, jonka
+kolmas suunta roikkuu — vaikka lattialla siihen riittäisi tavallinen `L`/`M`.
+
+Mitattuna: saapumisankkureita ovat `J` ja `X`, lähtöankkureita
+`O1 P1 L M T I X`.
+
+Syy on liitinsukupuoli, ja **ratkaisu on sama kuin mäen kanssa**: ketju kulkee
+kolosta tappiin, mutta yhdellä `C2`:lla se päättyy koloon ja kelpaa `L`:n
+tappiporttiin. BRIO ratkaisee saman asian samalla palalla. Sovituksen
+palavalikoimassa (`fit/beam.ts`) ei kuitenkaan ole sukupuolenvaihtajia, joten
+ketju ei voi päättyä toiseen parillisuuteen kuin mistä se lähti.
+
+Kokeilin lisätä ne valikoimaan kalliina ja vain kiinnitetylle maalille:
+saapumisankkureiksi tulivat odotetusti `O1 P1 L M T J I X`, eli tavallinen
+kaksihaarainen vaihde kelpasi. Muutos kuitenkin **rikkoi yhdistävän haaran**
+kokonaan yhdessä testitapauksessa, eikä syy selvinnyt — ehdokasjoukon kasvu
+näyttää syrjäyttävän aiemmin toimineen sovituksen. Muutos on siksi peruttu, ja
+tämä on sen kirjattu lähtökohta: ratkaisu tiedetään, mutta se vaatii oman
+vaiheensa, jossa saapumispään sovitus mitataan kunnolla.
+
 Yhdistävä haara maksaa kaksi vaihdetta, joten se häviäisi kustannuksissa aina
 umpiperälle. Hyvitys pitää sen edellä silloin kun kumpikin kelpaa — mutta
 molemmat tarjotaan, koska "umpiperä vai lenkki" on käyttäjän valinta.

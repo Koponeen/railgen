@@ -20,6 +20,18 @@ Sormen vapina on kohinaa, ei aikomus.
 2. **Ramer–Douglas–Peucker**, toleranssi 14 mm. Toteutus käyttää eksplisiittistä
    pinoa: sahalaitaisessa vedossa jako menee maksimaalisen epätasaisesti, ja
    rekursiivinen versio kaatuisi pinon syvyyteen.
+
+   **Toleranssia ei voi nostaa sormen värinän mittaan.** Se on absoluuttinen
+   etäisyys, ja `E`-kaaren nuolikorkeus on 15 mm, `E1`:n 8 mm — sitä suurempi
+   toleranssi litistäisi aidotkin kaaret jänteiksi. 14 mm on siis lähellä
+   kattoa, ei valinnanvaraa. Kokeiltu: 35 mm (~20° neljänkymmenen sentin
+   vedolla) rikkoo piirretyn silmukan sulkeutumisen.
+
+   Se ei silti ole ongelma, koska **sovitus jo hoitaa värinän**: mitattuna
+   1,6 metrin veto 40 mm:n siniaaltoisella värinällä sovittuu kahdeksaksi
+   suoraksi ja **nollaksi kaareksi** (keskipoikkeama 19 mm). Siksak-sakon
+   nostaminen 90:stä 260:een ei muuttanut tulosta lainkaan — värinä ei siis
+   tule rataan kaarina, ja suoran ja mutkan raja on jo siellä missä pitääkin.
 3. **Suljetun tunnistus**: päät alle loogisen solun (216 mm) päässä toisistaan
    *ja* vetoa vähintään kolme kertaa sen verran. Jälkimmäinen ehto estää lyhyttä
    edestakaista vetoa tulkitsemasta itseään lenkiksi.

@@ -8,7 +8,12 @@ import type { Vec } from '../core/vec'
 /** Tätä lähempänä olevat peräkkäiset näytteet ovat samaa kosketusta. */
 export const DEFAULT_MIN_STEP_MM = 5
 
-/** RDP-toleranssi: tätä pienemmät mutkat ovat vapinaa. */
+/**
+ * Ramer–Douglas–Peucker -toleranssi. Tätä ei voi nostaa sormen värinän
+ * mittaan: `E`-kaaren nuolikorkeus on 15 mm ja `E1`:n 8 mm, joten sitä
+ * suurempi toleranssi litistäisi aidotkin kaaret jänteiksi. Suoran ja mutkan
+ * ero ratkaistaan siksi sovituksessa (`beam.ts`), ei täällä.
+ */
 export const DEFAULT_RDP_TOLERANCE_MM = 14
 
 /** Päät tätä lähempänä toisiaan = käyttäjä tarkoitti silmukkaa (nappausetäisyys ~1 solu). */
