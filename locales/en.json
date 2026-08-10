@@ -158,6 +158,7 @@
       "joint-over-safety-cap": "One joint would be too sharp. Draw a gentler shape.",
       "self-collision": "The new run would hit the rest of the track. Draw it on the other side.",
       "no-options": "No options were found for this run. Stretch the selection with the handles, or add pieces.",
+      "no-substitutes": "Nothing else in the library ends at the same ports as {piece}, so there is no piece to put in its place. Stretch the selection with the handles for more options.",
       "no-room": "There is no clearance on either side of the track, and nearly every ready-made pattern needs some. Pick a run with room beside it, or enlarge the area."
     }
   },

@@ -225,16 +225,30 @@ export function App() {
     setRemoval(null)
     const options = solveSection(track, section.section, editOptions)
     if (options.length === 0) {
-      // Yleisin syy tyhjään vastaukseen ei ole palojen puute vaan tila: lähes
-      // jokainen kuvio tarvitsee tilaa radan viereen, ja lattian laitaan tai
-      // toisen raiteen viereen jäävällä osuudella sitä ei ole. Se on rehellinen
-      // syy ja kerrotaan sellaisenaan.
-      const { leftMm, rightMm } = section.brief
-      selectSection(section.section, { kind: Math.max(leftMm, rightMm) < MIN_PATTERN_ROOM_MM ? 'no-room' : 'no-options' })
+      // Tyhjä vastaus ei ole vastaus (README luku 0), joten syyn on oltava
+      // mitattu tosiasia eikä yleistä pahoittelua. Kaksi yleisintä syytä ovat
+      // mitattavissa suoraan: yhden palan korvausluokka voi olla tyhjä, ja
+      // lähes jokainen kuvio tarvitsee tilaa radan viereen.
+      selectSection(section.section, solveNote(section))
       return
     }
     setChoice(solveChoice(options))
   }, [section, track, editOptions, selectSection])
+
+  /** Miksi autosolverilla ei ollut mitään sanottavaa? Mitattu syy, ei pahoittelu. */
+  const solveNote = useCallback(
+    (state: SectionState): SectionState['note'] => {
+      const { indices } = state.section
+      if (indices.length === 1 && track) {
+        const id = track.pieces[indices[0]].pieceId
+        if (library.substitutesFor(id).length === 0) return { kind: 'no-substitutes', piece: id }
+      }
+      const { leftMm, rightMm } = state.brief
+      if (Math.max(leftMm, rightMm) < MIN_PATTERN_ROOM_MM) return { kind: 'no-room' }
+      return { kind: 'no-options' }
+    },
+    [track, library],
+  )
 
   /**
    * "Poista". Radan keskeltä poisto jättää aukkomerkin ja kysyy mitä sille

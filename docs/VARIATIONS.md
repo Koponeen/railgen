@@ -94,9 +94,18 @@ että alueen reunaan. Rataa täynnä olevalla lattialla se on nolla melkein
 kaikkialla, ja silloin vain mäki (joka ei tarvitse sivutilaa) ja suoristus
 kelpaavat.
 
-Se on rehellinen rajoitus, mutta se pitää myös sanoa: kun vastaus on tyhjä ja
-sivutilaa on kummallakin puolella alle kapeimman kuvion tarpeen, statusrivi
-kertoo tilasta eikä paloista.
+Se on rehellinen rajoitus, mutta se pitää myös sanoa. README luku 0: tyhjä
+vastaus ei ole vastaus, ja kun mitään ei ole tarjottavaa, syyn on oltava
+**mitattu tosiasia**. Kaksi yleisintä syytä mitataan suoraan:
+
+- **Yhden palan korvausluokka on tyhjä.** E-kaarelle ei ole toista palaa, joka
+  päättyisi samoihin portteihin — se on kirjastosta luettava tosiasia, ei
+  algoritmin väsähdys. Statusrivi nimeää palan ja neuvoo venyttämään valintaa,
+  koska pidemmällä osiolla vaihtoehtoja on enemmän.
+- **Sivutilaa ei ole kummallakaan puolella.** Silloin kerrotaan tilasta eikä
+  paloista.
+
+Vasta jos kumpikaan ei päde, jäljelle jää yleinen "ei löytynyt vaihtoehtoja".
 
 Toinen, aiemmin näkymätön syy oli täyttötaulukon katto. Taulukko kattoi vain
 2160 mm, joten sitä pidemmän osuuden väliä ei voinut täyttää lainkaan — pitkä

@@ -176,7 +176,13 @@ Omistaja tiivisti tavoitteen säännöksi, joka voittaa muut: **jos käyttäjä 
 - Periaatteesta seuraa myös, ettei irrallisuutta tarvitse pelätä: poisto saa jättää haaran roikkumaan ja vaihto katkaista liitoksen. Kiellettyä on vain valehteleva kirjanpito.
 - **Commit**: `Always answer a stroke with something`
 
-**Kesken:** sama periaate ei vielä päde palan vaihtoon eikä osuuden vaihtoehtoihin — kummankin tyhjä vastaus on yhä mahdollinen. Ne ovat seuraava vaihe.
+- **Tyhjän vastauksen syy mitataan.** Autosolverin tyhjä vastaus kertoo nyt kumman mitattavan esteen se kohtasi: palan korvausluokka on tyhjä (kirjastosta luettava tosiasia) vai sivutila loppui. Yleinen "ei löytynyt vaihtoehtoja" jää vain tapauksiin, joissa kumpikaan ei päde.
+
+**Mitä periaate ei vielä kata.** Palan vaihto voi yhä päätyä mitattuun syyhyn ehdotuksen sijaan, kun korvausluokka on tyhjä (E-kaari) — silloin *mikään* pala ei pääty samoihin portteihin, ja ainoa tapa ehdottaa jotain olisi antaa loppuradan siirtyä. Sama koskee mutkan korvaamista suoralla. Se on oma ominaisuutensa, ei virheenkorjaus:
+
+> **Vapaa häntä siirtyy.** Kun osuuden toisella puolella on radan avoin pää eikä silmukkaa, päätyporttia ei tarvitse pitää paikallaan: eri mittainen tai eri suuntainen pala kelpaa, ja hännän palat siirretään samalla jäykällä muunnoksella. Tämä avaisi kerralla mutkan korvaamisen suoralla, eri mittaiset vaihdot ja radan muotoilun päästä käsin.
+
+Se vaatii komponenttikävelyn (mikä osa radasta on hännässä), sijoitusten jäykän muunnoksen ja törmäystarkistuksen muunnetulle hännälle — eli oman vaiheensa, ei tämän jatkoa.
 
 Jokainen vaihe on itsenäisesti julkaistava, ja rata on joka välivaiheessa ehjä — epäonnistunut mutaatio tai sovitus ei koskaan jätä rikkinäistä tilaa näkyviin.
 

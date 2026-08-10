@@ -34,6 +34,8 @@ export type SectionNote =
   | { kind: 'no-options' }
   /** Kuviot tarvitsevat tilaa radan viereen, eikä sitä ole kummallakaan puolella. */
   | { kind: 'no-room' }
+  /** Palan korvausluokassa ei ole muita paloja — mitattu tosiasia, ei arvaus. */
+  | { kind: 'no-substitutes'; piece: string }
 
 /** Valittu osio: rajaus, tehtävänanto ja viimeisin epäonnistunut yritys. */
 export interface SectionState {
@@ -231,6 +233,7 @@ export function describeFitFailure(reason: FitReason): string {
 
 /** Rehellinen syy sille, miksi osiolle ei tullut uutta muotoa (README luku 6). */
 export function describeSectionNote(note: SectionNote): string {
+  if (note.kind === 'no-substitutes') return t('section.failure.no-substitutes', { piece: pieceName(note.piece) })
   if (note.kind === 'no-room') return t('section.failure.no-room')
   if (note.kind === 'no-options') return t('section.failure.no-options')
   if (note.kind === 'fill') {
