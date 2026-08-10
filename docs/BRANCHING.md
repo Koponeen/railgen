@@ -416,6 +416,22 @@ rinnakkain kuten ennenkin.
 
 Yhä auki:
 
+- **Nimilappu lupaa `T`:n mutta radalle tulee `L`/`M`.** Havaittu lattialla,
+  toistamatta. Nimilappu tulee `option.junctionId`:stä ja rata samasta
+  `option.track`:stä, joten niiden *pitäisi* olla samasta ankkurista — mismatch
+  tarkoittaa, että jossain kohtaa vaihtoehdon tunnus ja sen rata ovat eri
+  lähteistä. Ensimmäinen mitattava: tuottaako `extendTrack` vaihtoehdon, jonka
+  `junctionId` ei esiinny sen oman radan `added`-listassa. Se on aito
+  laatuvirhe: käyttöliittymä ei saa luvata yhtä ja tehdä toista.
+- **Pari milliä ohi, ja risteys jää tekemättä.** Veto ohitti radan hitusen
+  väärältä puolelta, jolloin ylitystä ei tunnistettu ja haarasta tuli tynkä.
+  Nappaus ja aikomuksen tulkinta ovat tässä liian tarkkoja: risteämän
+  tunnistuskynnys on `TRACK_WIDTH_MM * 0.9` keskilinjojen väliltä
+  (`crossing.ts`), eli veto lasketaan ylitykseksi vasta kun se osuu lähes
+  keskilinjaan. Sormella piirretty viiva ei osu. Kynnys pitää mitata sormen
+  tarkkuudella eikä laudan leveydellä, ja lisäksi: kun veto päättyy radan
+  *viereen*, aikomus on lähes aina joko ylitys tai liitos — ei tynkä.
+
 - **`T` molempiin päihin.** Omistajan linjaus: kohtisuoraan vedetty viiva saa
   oletuksena `T`:n kumpaankin päähän, ja jos ketjuun tarvitaan väliin
   sukupuolenvaihtaja, olkoon niin — käyttäjä piirsi vaakasuoran viivan ja sen
