@@ -305,13 +305,32 @@ describe('extendTrack from a free end', () => {
 
   it('still branches when the stroke starts away from the end', () => {
     // Kauempaa aloitettu veto on yhä haara: jatko on oletus vain pään vieressä.
-    // Kaaret rajaavat suoran osuuden, jolle vaihde mahtuu.
-    const track = buildChain([{ id: 'D' }, { id: 'E' }, { id: 'E' }, ...CHAIN, { id: 'E' }, { id: 'E' }, { id: 'D' }])
-    const start = midOfPiece(track, 4)
+    const track = buildChain([...CHAIN, ...CHAIN])
+    const start = midOfPiece(track, 3)
     const result = extendTrack(track, stroke(start, { x: start.x, y: start.y + 700 }), { area: AREA })
 
     expect(result.reason).toBe('ok')
     expect(result.options.every((option) => option.kind !== 'end')).toBe(true)
+  })
+
+  it('branches from a plain run of straights: the run just gets refilled around the switch', () => {
+    // Yhden suoran voi korvata usealla lyhyemmällä, joten vaihde mahtuu mille
+    // tahansa suoralle osuudelle — myös sellaiselle, joka on koko rata.
+    const track = buildChain([...CHAIN, ...CHAIN])
+    const start = midOfPiece(track, 3)
+    const [option] = extendTrack(track, stroke(start, { x: start.x, y: start.y + 700 }), { area: AREA }).options
+
+    expect(library.get(option.junctionId).ports.some((port) => port.branch)).toBe(true)
+    // Osuus puretaan ja kootaan uudelleen: D:eitä lähtee ja lyhyempiä tulee
+    // tilalle, mutta radan päät eivät liiku.
+    expect(option.removed.D).toBeGreaterThan(0)
+    expectIntact(track, option)
+    for (const end of freeEnds(track, library)) {
+      const still = freeEnds(option.track, library).some(
+        (candidate) => Math.hypot(candidate.frame.x - end.frame.x, candidate.frame.y - end.frame.y) < 1,
+      )
+      expect(still).toBe(true)
+    }
   })
 })
 

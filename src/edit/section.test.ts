@@ -152,11 +152,24 @@ describe('naturalSection', () => {
     expect(section.end.dir).toBe(section.start.dir)
   })
 
-  it('refuses a selection that covers the whole track', () => {
+  it('refuses a selection that closes on itself: a loop has no end ports', () => {
     const track = buildLoop()
     const section = makeSection(track, library, track.pieces.map((_, index) => index))
 
     expect(section?.replaceable).toBe(false)
+  })
+
+  it('accepts a selection covering a whole open track: its ends are rail ends', () => {
+    // Puuttuva naapuri on radan avoin pää, ei este. Ilman tätä eroa pelkistä
+    // suorista koostuvalta radalta ei voinut haaroittaa lainkaan, koska koko
+    // rata on yksi luonnollinen jakso.
+    const track = buildChain(Array.from({ length: 6 }, () => ({ id: 'D' })))
+    const section = naturalSection(track, library, 2)
+
+    expect(section?.indices).toHaveLength(6)
+    expect(section?.before).toBeNull()
+    expect(section?.after).toBeNull()
+    expect(section?.replaceable).toBe(true)
   })
 
   // Oikeassa generoidussa radassa on sivuraiteita, ja niiden vaihde on juuri se

@@ -152,8 +152,9 @@ Toinen lattiatesti nosti esiin, että koodi ei tuntenut radan **avoimia päitä*
 - **Jatko päästä.** Kiskonpään vieressä veto luki tilanteen haaraksi ja työnsi vaihteen viereen. Nyt avoin pää on haarakohta, joka ei lisää mitään, ja se on oletus pään ympärillä. Radan kaksi päätä jatkuvat eri tavoin: koloportista ketju rakennetaan päätä kohti.
 - **Poisto.** Radan päästä poisto ei tuottanut mitään, koska vapaa pää luettiin porttipariksi ja aukko tarjottiin täytettäväksi takaisin. Nyt päästä poisto toteutuu suoraan, ja keskeltä poistetun aukon saa myös jättää auki.
 - **Suoristus.** Mutkittelevalle osuudelle ei kelvannut yksikään valmis kuvio, koska kaikki upotetaan suoralle. Yksinkertaisin vaihtoehto — suora — on nyt oma ehdotuksensa.
+- **Haarautuminen suoralta.** Osion korvattavuus vaati naapuria valinnan ulkopuolelta, jolloin pelkistä suorista koostuva avoin rata — yksi ainoa luonnollinen jakso — ei kelvannut haarakohdaksi. Puuttuva naapuri on kuitenkin radan avoin pää eikä este: osuuden pituus säilyy, joten kiskonpää pysyy paikallaan. Este on vain valinta, joka sulkeutuu itseensä.
 - Lisäksi valinnan mittasuhteet: zoomaus ei enää mene palan mittaan, ja päätykahvat ovat puolet entisestä.
-- **Commit**: `Continue from rail ends, make deletion final and offer a straight`
+- **Commit**: `Continue from rail ends, make deletion final and offer a straight` ja `Branch from a run whose ends are rail ends`
 
 Jokainen vaihe on itsenäisesti julkaistava, ja rata on joka välivaiheessa ehjä — epäonnistunut mutaatio tai sovitus ei koskaan jätä rikkinäistä tilaa näkyviin.
 

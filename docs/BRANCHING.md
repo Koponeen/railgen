@@ -70,6 +70,12 @@ Osuuden rajaus on sama `naturalSection` kuin osion valinnassa, ja korvattavuuden
 ehdot ovat samat: keskeltä ei saa lähteä haaraa, päiden on oltava samalla
 tasolla. Sama koneisto palvelee kolmea eri tehtävää, mikä on tarkoituskin.
 
+Osuuden **pää saa olla radan avoin pää**. BRIO-järjestelmässä yhden suoran voi
+korvata usealla lyhyemmällä, joten vaihde mahtuu mille tahansa suoralle
+osuudelle — myös sellaiselle, joka sattuu olemaan koko rata. Pelkistä suorista
+koostuva avoin rata on kokonaisuudessaan yksi luonnollinen jakso, ja aiemmin
+sellaiselta ei voinut haaroittaa lainkaan (`docs/EDITING.md`).
+
 ### Kaari: jäykkä piste
 
 Kaarta ei voi siirtää, joten vaihtoehtoja on kolme (README luku 5):

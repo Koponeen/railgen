@@ -36,6 +36,13 @@ describe('removeSection at a free end', () => {
     expect(removed.track?.usage.D).toBe((track.usage.D ?? 0) - 2)
   })
 
+  it('refuses to delete the whole track: the board has its own button', () => {
+    const track = buildChain(CHAIN)
+    const section = makeSection(track, library, track.pieces.map((_, index) => index))
+    if (!section) throw new Error('no section')
+    expect(removeSection(track, section, { area: AREA }).reason).toBe('section-not-removable')
+  })
+
   it('still asks about a gap in the middle of the track', () => {
     const track = buildLoop()
     const section = naturalSection(track, library, 1)

@@ -75,9 +75,12 @@ export interface FillGapResult {
  * ne ovat aukon reunat ja samalla se tehtävänanto, jonka täyttö tai piirto saa.
  */
 export function removeSection(track: Track, section: Section, options: RemoveOptions): RemoveResult {
-  // Sama ehto kuin korvauksella: keskeltä ei saa lähteä haaraa, eikä koko rataa
-  // voi poistaa. Purkaminen jättäisi muuten haaran roikkumaan irralleen.
+  // Sama ehto kuin korvauksella: osion keskeltä ei saa lähteä haaraa, muuten
+  // purkaminen jättäisi sen roikkumaan irralleen.
   if (!section.replaceable) return { track: null, gap: null, reason: 'section-not-removable' }
+  // Koko radan poistaminen tyhjentäisi pöydän, ja siihen on oma nappinsa. Tyhjä
+  // rata ei myöskään ole rata, jota kartta osaisi piirtää.
+  if (section.indices.length >= track.pieces.length) return { track: null, gap: null, reason: 'section-not-removable' }
 
   const library = options.library ?? defaultLibrary()
   const inside = new Set(section.indices)

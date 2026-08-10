@@ -35,8 +35,22 @@ asuvat täällä, jotta sama logiikka palvelee valintaa, toimintoriviä ja korva
 
 - **Keskeltä lähtee haara.** Purkaminen jättäisi haaran roikkumaan irralleen.
   Ulos johtavia liitoksia saa siis olla vain osion päissä.
-- **Osio kattaa koko radan.** Silloin ei ole päätyportteja, joihin kiinnittyä.
+- **Osio sulkeutuu itseensä** (valittu koko silmukka). Silloin päätyportteja ei
+  ole: alku ja loppu ovat sama piste.
 - **Päät ovat eri tasolla** (mäki). Sovitus sijoittaa vain tasaisia paloja.
+
+**Puuttuva naapuri ei ole este.** Se on radan avoin pää, ja se on yhtä hyvä
+kiinnityskohta kuin naapuripalan portti: osuuden pituus säilyy, joten kiskonpää
+jää sinne missä olikin. Ero on olennainen, koska pelkistä suorista koostuva
+avoin rata on kokonaisuudessaan **yksi** luonnollinen jakso — jos puuttuva
+naapuri estäisi korvauksen, sellaiselta radalta ei voisi haaroittaa lainkaan.
+BRIO-järjestelmässä yhden suoran voi korvata usealla lyhyemmällä, joten vaihde
+mahtuu mille tahansa suoralle osuudelle; osuus vain kootaan uudelleen sen
+molemmin puolin.
+
+Koko radan **poistaminen** on silti torjuttu erikseen: tyhjä rata ei ole rata,
+jonka kartta osaisi piirtää, ja pöydän tyhjentämiseen on oma nappinsa
+(`docs/UI.md`).
 
 Kaikissa tapauksissa valinta onnistuu ja näkyy kartalla, mutta "Piirrä tilalle"
 on pois käytöstä ja statusrivi kertoo miksi.

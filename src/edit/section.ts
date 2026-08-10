@@ -172,12 +172,25 @@ export function makeSection(track: TrackChain, library: PieceLibrary, indices: r
   const last = list[list.length - 1]
   const start = framesOf(track, library, first).entry
   const end = framesOf(track, library, last).exit
-  // Naapuri osion sisältä tarkoittaa että valinta sulkeutuu itseensä; silloin
-  // päätyportteja ei ole eikä ketjua saa liitettyä mihinkään.
-  const neighbourOutside = (index: number | null): number | null => (index !== null && !inside.has(index) ? index : null)
-  const before = neighbourOutside(backwardOf(track, library, neighbours, first))
-  const after = neighbourOutside(forwardOf(track, library, neighbours, last))
-  const openEnded = before !== null || after !== null
+
+  // Naapurin puuttuminen ja naapuri osion sisältä ovat eri asioita, vaikka
+  // kummassakin naapuria ei ole *ulkopuolella*:
+  //
+  // - **Naapuri osion sisältä** tarkoittaa että valinta sulkeutuu itseensä.
+  //   Silloin päätyportteja ei ole: alku ja loppu ovat sama piste, eikä
+  //   ketjua saa liitettyä mihinkään.
+  // - **Naapuria ei ole lainkaan** tarkoittaa radan avointa päätä. Se on täysin
+  //   kelvollinen kiinnityskohta ja pysyy paikallaan, koska osuuden pituus
+  //   säilyy — kiskonpää on siellä minne se jäi.
+  //
+  // Ero on olennainen: ilman sitä pelkistä suorista koostuvalta avoimelta
+  // radalta ei voinut haaroittaa lainkaan, koska koko rata on yksi osio ja sen
+  // molemmat naapurit "puuttuvat".
+  const backward = backwardOf(track, library, neighbours, first)
+  const forward = forwardOf(track, library, neighbours, last)
+  const before = backward !== null && !inside.has(backward) ? backward : null
+  const after = forward !== null && !inside.has(forward) ? forward : null
+  const cyclic = (backward !== null && inside.has(backward)) || (forward !== null && inside.has(forward))
 
   // Korvaus purkaa osion ja liittää tilalle uuden ketjun, joten osiosta ulos
   // johtavia liitoksia saa olla vain sen päissä. Muuten keskeltä lähtevä haara
@@ -189,13 +202,8 @@ export function makeSection(track: TrackChain, library: PieceLibrary, indices: r
   )
 
   // Tasoa vaihtava osio (mäki) vaatisi ramppeja, joita sovitus ei sijoita;
-  // koko radan kattavalla valinnalla ei ole päätyportteja mihin kiinnittyä.
-  const replaceable =
-    branchFree &&
-    openEnded &&
-    new Set(list).size === list.length &&
-    list.length < track.pieces.length &&
-    start.level === end.level
+  // itseensä sulkeutuvalla valinnalla ei ole päätyportteja mihin kiinnittyä.
+  const replaceable = branchFree && !cyclic && new Set(list).size === list.length && start.level === end.level
 
   return { indices: list, start, end, before, after, replaceable }
 }
