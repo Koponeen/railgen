@@ -416,6 +416,20 @@ rinnakkain kuten ennenkin.
 
 Yhä auki:
 
+- **`T` molempiin päihin.** Omistajan linjaus: kohtisuoraan vedetty viiva saa
+  oletuksena `T`:n kumpaankin päähän, ja jos ketjuun tarvitaan väliin
+  sukupuolenvaihtaja, olkoon niin — käyttäjä piirsi vaakasuoran viivan ja sen
+  hän saa. `I`/`J` valitaan tarvittaessa jälkikäteen palan vaihdolla. Lähtöpää
+  on nyt kunnossa (`T` voittaa mitatusti), saapumispää ei: siihen tarvitaan
+  sukupuolenvaihtaja sovituksen palavalikoimaan ja `T`:n haaraportin
+  sukupuolen ratkaisu (`docs/PIECE_LIBRARY.md`).
+- **`O`/`P` haarakohtana suoralla.** Ne ovat kaksi `E1`-kaarta samasta päästä,
+  eivät suoraa lainkaan, joten ne eivät nyt mahdu suoralle osuudelle — vain
+  kaaren tilalle. Omistajan havainto: niitä *voisi* käyttää, kun läpimenevä
+  reitti saa muuttua pieneksi kiemuraksi (S) ja poikittainen haara kääntyy
+  siinä oikein. Se vaatii, että upotus sallii ytimen siirtävän läpireittiä
+  sivusuunnassa ja osuuden täyttö nielee siirtymän — nyt ydin saa vain jatkaa
+  samaan suuntaan samalla linjalla.
 - **Useampi ylitys yhdellä vedolla** ratkeaa yhä vain tynkänä: ensimmäinen
   risteämä ratkaistaan tai ei kumpaakaan. Ketjutettu ratkaisu vaatisi
   ylityskohtaisen kysymyksen, eli monivaiheisen haamukyselyn.
