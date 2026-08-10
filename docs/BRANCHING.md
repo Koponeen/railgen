@@ -128,13 +128,17 @@ on samaa suuruusluokkaa kuin sovituksen ja kumoaa sen. Kaksi termiä tekee sen:
   `O1` (108 mm) jättää porttinsa 76 mm:n päähän, `T` (216 mm) 147 mm:n. Se on
   geometrinen sattuma eikä laatusignaali.
 
-Korjaus on käsitteellinen: **haarakohdan hinnan kuuluu ratkaista tasapelit, ei
-tuomita muotoa.** Kokeiltu neljäsosa- ja puolipainolla — `T` nousi kummallakin
-ensimmäiseksi (279 vastaan `L` 298), mutta samalla siltavaihtoehto putosi
-risteämien kärkikolmikosta, koska anturoiden hintojen kutistuessa
-tasoristeysvariantit ruuhkautuvat sen edelle. Muutos on siksi peruttu: se
-vaatii samalla `rank`-karsinnan muuttamisen niin, että risteämästä näytetään
-yksi vaihtoehto per ratkaisu (yli vai poikki), ei kolmea tasoristeystä.
+**Korjattu.** Haarakohdan hinnan kuuluu ratkaista tasapelit, ei tuomita
+muotoa, joten se painaa neljäsosalla (`ANCHOR_WEIGHT`). Mitattuna sama veto
+antaa nyt `T`(279) `L`(298) `O1`(325) — muoto ratkaisee, ja kohtisuoraan
+piirretty viiva saa vaihteen joka kääntyy kohtisuoraan.
+
+Sama muutos vaati toisen: ankkurihintojen kutistuessa tasoristeysvariantit
+ruuhkautuivat sillan edelle risteämien kärkikolmikossa. Risteämässä kysymys on
+kuitenkin **"yli vai poikki"**, ei se mikä vaihde haaran aloittaa — kolme
+tasoristeystä eri vaihteilla on yksi vastaus kolmesti. Siksi risteämän sisältävät
+vaihtoehdot karsitaan nyt ratkaisun mukaan (`crossing|crossingId`), eivät
+haarapalan; silta säilyy omana vastauksenaan.
 
 **T ei ole risteys.** Se sai aluksi saman sakon kuin `X`, koska molemmilla on
 `tee`/`star`-tagi — ja siksi kohtisuoraan piirretty haara sai vastaukseksi

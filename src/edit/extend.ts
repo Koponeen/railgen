@@ -152,6 +152,17 @@ const LOOSE_COST = 100000
 /** Irrallinen rata alkaa vasta täältä: kaksi lautaa ei mahdu samaan kohtaan. */
 const LOOSE_CLEARANCE_MM = TRACK_WIDTH_MM * 1.5
 
+/**
+ * Haarakohdan hinta on **tasapelin ratkaisija, ei tuomari.** Se kertoo mistä
+ * haara lähtee — kuinka läheltä sormea ja kuinka tavallisella palalla — mutta
+ * sen mitä käyttäjä piirsi mittaa sovitus. Täydellä painolla ne olivat samaa
+ * suuruusluokkaa, ja haarakohta kumosi sovituksen tuomion: kohtisuoraan
+ * vedetylle viivalle `T` sovittui mitatusti parhaiten (227 vastaan 262 ja 291),
+ * mutta hävisi, koska `L` on `basic` ja `O1` lyhyempi — kumpikaan ei kerro
+ * mitään piirretystä muodosta.
+ */
+const ANCHOR_WEIGHT = 0.25
+
 /** Voittaja on selvä, jos se on tämän verran halvempi kuin seuraava. */
 const AUTO_MARGIN = 0.7
 
@@ -432,7 +443,7 @@ function attach(
       pieceCount: branchCount,
       deviation: meta.deviation,
       withinInventory: Object.keys(next.shortages).length === 0,
-      cost: anchor.cost + meta.extraCost,
+      cost: anchor.cost * ANCHOR_WEIGHT + meta.extraCost,
     },
     reason: 'ok',
   }
@@ -907,7 +918,13 @@ function rank(options: readonly BranchOption[], limit: number): BranchOption[] {
   return [...options]
     .sort((a, b) => a.cost - b.cost || a.junctionId.localeCompare(b.junctionId))
     .filter((option) => {
-      const key = `${option.junctionId}|${option.kind}|${option.variant}|${option.rejoinId ?? ''}|${option.crossing}|${option.crossingId ?? ''}`
+      // Risteämässä kysymys on "yli vai poikki", ei se mikä vaihde haaran
+      // aloittaa: kolme tasoristeystä eri vaihteilla on yksi vastaus kolmesti,
+      // ja se työntäisi sillan — toisen aidon vastauksen — kokonaan pois.
+      const key =
+        option.crossing === 'none'
+          ? `${option.junctionId}|${option.kind}|${option.variant}|${option.rejoinId ?? ''}|none`
+          : `${option.crossing}|${option.crossingId ?? ''}`
       if (seen.has(key)) return false
       seen.add(key)
       return true
