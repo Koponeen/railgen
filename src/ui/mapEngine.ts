@@ -9,6 +9,7 @@ import {
   type AppState,
   type HandleId,
   type Mode,
+  type Ghost,
   type Point,
   type SectionHandles,
   type ViewTransform,
@@ -37,6 +38,10 @@ export interface MapEngineContent {
   selection?: readonly number[] | null
   /** Osion liukuvat päätykahvat. */
   handles?: SectionHandles | null
+  /** Valittavat vaihtoehdot haamuina radan päällä. */
+  ghosts?: readonly Ghost[] | null
+  /** Kartta käännetty neljänneskierroksen ruudulle sopimaan. */
+  rotated?: boolean
 }
 
 export interface MapEngineCallbacks {
@@ -45,6 +50,8 @@ export interface MapEngineCallbacks {
   onDraw?: (points: Point[]) => void
   /** Napautus palaan, tai null kun napautus osui tyhjään. */
   onTapPiece?: (index: number | null) => void
+  /** Napautus haamuesikatseluun: käyttäjä valitsi sen vaihtoehdon. */
+  onTapGhost?: (index: number) => void
   /** Päätykahvaa vedetään: mihin kohtaan maailmaa sormi osoittaa. */
   onHandleMove?: (handle: HandleId, point: Point) => void
   onHandleEnd?: () => void
@@ -68,6 +75,7 @@ export function mountMapEngine(
 ): MapEngineHandle {
   const state: AppState = createInitialState(initial.area)
   state.track = initial.track
+  state.rotated = initial.rotated ?? false
   let draft: Point[] | null = null
 
   function snapshot(): MapEngineSnapshot {
@@ -94,8 +102,18 @@ export function mountMapEngine(
 
   function handleTap(client: { clientX: number; clientY: number }): void {
     const element = document.elementFromPoint(client.clientX, client.clientY)
-    const pieceElement = element instanceof Element ? element.closest('[data-piece-index]') : null
-    const index = pieceElement?.getAttribute('data-piece-index')
+    if (!(element instanceof Element)) {
+      callbacks.onTapPiece?.(null)
+      return
+    }
+    // Haamu on radan päällä ja voittaa siksi myös napautuksessa: kysymykseen
+    // vastataan ennen kuin karttaa aletaan taas selata.
+    const ghost = element.closest('[data-ghost-index]')?.getAttribute('data-ghost-index')
+    if (ghost !== null && ghost !== undefined) {
+      callbacks.onTapGhost?.(Number(ghost))
+      return
+    }
+    const index = element.closest('[data-piece-index]')?.getAttribute('data-piece-index')
     callbacks.onTapPiece?.(index === null || index === undefined ? null : Number(index))
   }
 
@@ -167,6 +185,8 @@ export function mountMapEngine(
       state.track = next.track
       state.selection = next.selection ?? null
       state.handles = next.handles ?? null
+      state.ghosts = next.ghosts ?? []
+      state.rotated = next.rotated ?? false
       setGuide(next.guide)
       if (moved) state.view = fitView()
       emit()

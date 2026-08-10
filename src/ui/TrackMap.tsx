@@ -3,7 +3,7 @@ import type { PieceLibrary } from '../core/library'
 import type { Track } from '../gen/build'
 import type { AreaShape } from '../gen/mask'
 import { mountMapEngine, type MapEngineHandle, type MapEngineSnapshot } from './mapEngine'
-import type { HandleId, Mode, Point, SectionHandles } from './state'
+import type { Ghost, HandleId, Mode, Point, SectionHandles } from './state'
 import { screenTrackCss } from './trackStyles'
 
 interface TrackMapProps {
@@ -18,11 +18,14 @@ interface TrackMapProps {
   selection?: readonly number[] | null
   /** Osion liukuvat päätykahvat. */
   handles?: SectionHandles | null
+  /** Valittavat vaihtoehdot haamuina radan päällä. */
+  ghosts?: readonly Ghost[] | null
   /** Pieni tunnus kartan kulmassa, esim. valitun osion mitta. */
   badge?: string | null
   onChange?: (snapshot: MapEngineSnapshot) => void
   onDraw?: (points: Point[]) => void
   onTapPiece?: (index: number | null) => void
+  onTapGhost?: (index: number) => void
   onHandleMove?: (handle: HandleId, point: Point) => void
   onHandleEnd?: () => void
   /** Antaa juuri-SVG:n ulos vientiä varten. */
@@ -41,10 +44,12 @@ export function TrackMap({
   guide,
   selection,
   handles,
+  ghosts,
   badge,
   onChange,
   onDraw,
   onTapPiece,
+  onTapGhost,
   onHandleMove,
   onHandleEnd,
   svgRef,
@@ -57,8 +62,8 @@ export function TrackMap({
 
   // Moottori mountataan kerran, mutta callbackit vaihtuvat joka renderillä:
   // ref pitää kartan kutsumassa aina tuoreinta, ei mounttihetken versiota.
-  const handlers = useRef({ onChange, onDraw, onTapPiece, onHandleMove, onHandleEnd })
-  handlers.current = { onChange, onDraw, onTapPiece, onHandleMove, onHandleEnd }
+  const handlers = useRef({ onChange, onDraw, onTapPiece, onTapGhost, onHandleMove, onHandleEnd })
+  handlers.current = { onChange, onDraw, onTapPiece, onTapGhost, onHandleMove, onHandleEnd }
 
   // Pyöritys on vain esitystason asia (README luku 7): pystyssä olevalla
   // puhelimella vaakasuuntainen lattia kääntyy neljänneskierroksen, jolloin se
@@ -83,7 +88,7 @@ export function TrackMap({
       localSvgRef.current,
       worldRef.current,
       library,
-      { area, track, guide, selection, handles },
+      { area, track, guide, selection, handles, ghosts, rotated },
       {
         onChange(snapshot) {
           handlers.current.onChange?.(snapshot)
@@ -93,6 +98,9 @@ export function TrackMap({
         },
         onTapPiece(index) {
           handlers.current.onTapPiece?.(index)
+        },
+        onTapGhost(index) {
+          handlers.current.onTapGhost?.(index)
         },
         onHandleMove(handle, point) {
           handlers.current.onHandleMove?.(handle, point)
@@ -112,8 +120,8 @@ export function TrackMap({
   }, [library])
 
   useEffect(() => {
-    engineRef.current?.update({ area, track, guide, selection, handles })
-  }, [area, track, guide, selection, handles])
+    engineRef.current?.update({ area, track, guide, selection, handles, ghosts, rotated })
+  }, [area, track, guide, selection, handles, ghosts, rotated])
 
   useEffect(() => {
     engineRef.current?.setMode(mode)

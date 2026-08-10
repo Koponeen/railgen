@@ -103,7 +103,30 @@
       "no-fit": "No combination of pieces follows that stroke. Try a gentler shape.",
       "closure-beyond-budget": "The loop does not close. Draw a rounder loop or enable the flex piece.",
       "joint-over-safety-cap": "One joint would be too sharp. Draw a gentler shape.",
-      "self-collision": "The track would run into itself. Crossing tracks come later."
+      "self-collision": "The track would run into itself. A crossing can be resolved as a branch: draw the track without crossing first, then add the crossing part as a branch."
+    }
+  },
+  "branch": {
+    "choose": "Pick a branch on the map.",
+    "cancel": "Cancel",
+    "added": "Branch added: {pieces} pieces · track {length} m · {change}",
+    "uses": "uses {added}",
+    "change": "uses {added}, frees {removed}",
+    "option": {
+      "plain": "Branch ({piece})",
+      "level": "Level crossing ({crossing})",
+      "bridge": "Bridge over ({piece})"
+    },
+    "failure": {
+      "unknown": "The branch could not be added.",
+      "drawing-too-short": "That stroke is too short for a branch. Draw a longer one.",
+      "not-on-track": "The branch starts too far from the track. Start the stroke next to it.",
+      "no-branch-point": "No switch fits here. Try another spot, or add switches to your pieces.",
+      "no-fit": "No combination of pieces follows that branch. Try a gentler shape.",
+      "ends-beyond-budget": "The switch does not fit on this run. Try another spot.",
+      "joint-over-safety-cap": "One joint would end up too sharp. Draw a gentler shape.",
+      "self-collision": "The branch would hit the rest of the track. Draw it on the other side.",
+      "crossing-unresolved": "The branch crosses the track where neither a crossing nor a bridge fits. Cross it head-on and leave straight track on both sides of the crossing."
     }
   },
   "section": {

@@ -103,7 +103,30 @@
       "no-fit": "Viivalle ei löytynyt palayhdistelmää. Kokeile loivempaa muotoa.",
       "closure-beyond-budget": "Silmukka ei sulkeudu. Piirrä pyöreämpi lenkki tai ota joustopala käyttöön.",
       "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Piirrä loivempi muoto.",
-      "self-collision": "Rata osuisi itseensä. Risteävät radat tulevat myöhemmin."
+      "self-collision": "Rata osuisi itseensä. Risteämän saa ratkaistua haarana: piirrä ensin rata risteämättä ja lisää risteävä osuus haarana."
+    }
+  },
+  "branch": {
+    "choose": "Valitse haara kartalta.",
+    "cancel": "Peruuta",
+    "added": "Haara lisätty: {pieces} palaa · rata {length} m · {change}",
+    "uses": "käyttää {added}",
+    "change": "käyttää {added}, vapauttaa {removed}",
+    "option": {
+      "plain": "Haara ({piece})",
+      "level": "Tasoristeys ({crossing})",
+      "bridge": "Silta yli ({piece})"
+    },
+    "failure": {
+      "unknown": "Haaraa ei saatu rataan.",
+      "drawing-too-short": "Viiva on liian lyhyt haaraksi. Piirrä pidempi.",
+      "not-on-track": "Haara alkaa liian kaukaa radasta. Aloita veto radan vierestä.",
+      "no-branch-point": "Tähän kohtaan ei mahdu vaihdetta. Kokeile toista kohtaa tai lisää vaihteita palalistaan.",
+      "no-fit": "Haaralle ei löytynyt palayhdistelmää. Kokeile loivempaa muotoa.",
+      "ends-beyond-budget": "Vaihde ei mahdu tälle osuudelle. Kokeile toista kohtaa.",
+      "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Piirrä loivempi muoto.",
+      "self-collision": "Haara osuisi muuhun rataan. Piirrä se toiselle puolelle.",
+      "crossing-unresolved": "Haara ylittää radan kohdassa, johon ei saa risteystä eikä siltaa. Ylitä rata suoraan ja jätä ylityksen molemmin puolin suoraa."
     }
   },
   "section": {

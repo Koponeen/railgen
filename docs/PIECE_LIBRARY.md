@@ -119,6 +119,14 @@ kahdella eri tavalla:
 - **Sukupuolipari** (`I`/`J`, `O`/`P`, `F`/`G`): sama pala, liitinsukupuolet päinvastoin.
   Näissä on jo molemmat haarat, joten peilaus ei tuottaisi uutta palaa.
 
+Risteys `H` on poikkeus: siinä ei ole kieliä, ja lähteen mukaan se toimitetaan **kahtena
+kappaleena juuri siksi, että liitinsukupuolten suunnan voi kääntää**. Se on datassa
+`mirrorable: true`, jolloin peilaus valitsee parista toisen kappaleen: poikittaisen raiteen
+kolo ja tappi vaihtavat päitä. Ilman tuota vaihtoehtoa risteyksen läpi pääsisi vain
+toiseen suuntaan, koska ketju kulkee aina kolosta tappiin (`docs/BRANCHING.md`).
+Läpimenevä reitti on suora eikä sen signatuuri muutu peilatessa, joten korvausluokka
+pysyy ennallaan.
+
 Käänteinen variantti päätyy silti samaan korvausluokkaan: signatuurin kanonisointi kokeilee
 kumpaakin porttia lähtökohtana, joten `J` kelpaa `A`:n paikalle — se vain kuljetaan toisesta
 päästä. Testit tarkistavat tämän.

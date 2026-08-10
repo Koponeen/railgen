@@ -5,6 +5,7 @@ import { placedSegments, type PlacedPiece } from '../core/pieces'
 import { GROOVE_SPACING_MM } from '../core/units'
 import type { Track } from '../gen/build'
 import { areaOutline, type AreaShape } from '../gen/mask'
+import type { Ghost } from './state'
 
 // Rata piirretään geometriadatasta, ei kuva-asseteista (CLAUDE.md). Lauta on
 // keskilinja levitettynä 40 mm:iin ja urat sen rinnakkaissiirtoja, joten
@@ -77,6 +78,63 @@ function buildBuffer(segments: ReturnType<typeof placedSegments>): SVGLineElemen
   bar.setAttribute('y2', String(right.y))
   bar.setAttribute('class', 'piece-buffer')
   return bar
+}
+
+/**
+ * Haamuesikatselu: vain ne palat, jotka vaihtoehto lisäisi tai siirtäisi.
+ * Epäselvyydet ratkaistaan kartalla eikä dialogeilla (README luku 6), joten
+ * haamu on samalla napautuskohde — leveä näkymätön osumapolku tekee siitä
+ * sormella osuttavan.
+ */
+export function buildGhostGroup(ghost: Ghost, library: PieceLibrary, rotated: boolean): SVGGElement {
+  const group = document.createElementNS(SVG_NS, 'g')
+  group.setAttribute('class', 'ghost')
+  group.setAttribute('data-ghost-index', String(ghost.index))
+
+  for (const placed of ghost.pieces) {
+    const piece = library.get(placed.pieceId)
+    const d = toSvgPath(placedSegments(placed, piece))
+    if (!d) continue
+
+    const hit = document.createElementNS(SVG_NS, 'path')
+    hit.setAttribute('d', d)
+    hit.setAttribute('class', 'ghost-hit')
+    group.appendChild(hit)
+
+    const board = document.createElementNS(SVG_NS, 'path')
+    board.setAttribute('d', d)
+    board.setAttribute('class', 'piece-board')
+    group.appendChild(board)
+
+    const groove = document.createElementNS(SVG_NS, 'polyline')
+    groove.setAttribute('points', pointsAttribute(offsetPolyline(placedSegments(placed, piece), 0)))
+    groove.setAttribute('class', 'piece-groove')
+    group.appendChild(groove)
+  }
+
+  group.appendChild(buildGhostTag(ghost, rotated))
+  return group
+}
+
+/** Numerolappu haamun päällä: kartta kertoo itse, monesko vaihtoehto tämä on. */
+function buildGhostTag(ghost: Ghost, rotated: boolean): SVGGElement {
+  const tag = document.createElementNS(SVG_NS, 'g')
+  // Kartta voi olla käännetty ruudulle sopimaan; numero ei saa kääntyä mukana.
+  if (rotated) tag.setAttribute('transform', `rotate(-90 ${ghost.tag.x.toFixed(1)} ${ghost.tag.y.toFixed(1)})`)
+  const circle = document.createElementNS(SVG_NS, 'circle')
+  circle.setAttribute('cx', ghost.tag.x.toFixed(1))
+  circle.setAttribute('cy', ghost.tag.y.toFixed(1))
+  circle.setAttribute('r', '48')
+  circle.setAttribute('class', 'ghost-tag')
+  tag.appendChild(circle)
+
+  const text = document.createElementNS(SVG_NS, 'text')
+  text.setAttribute('x', ghost.tag.x.toFixed(1))
+  text.setAttribute('y', ghost.tag.y.toFixed(1))
+  text.setAttribute('class', 'ghost-tag-text')
+  text.textContent = String(ghost.index + 1)
+  tag.appendChild(text)
+  return tag
 }
 
 export function buildAreaShape(area: AreaShape): SVGPolygonElement {

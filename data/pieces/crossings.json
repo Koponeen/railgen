@@ -2,8 +2,9 @@
   {
     "id": "H",
     "kind": "junction",
+    "mirrorable": true,
     "tags": ["crossing"],
-    "notes": "Kaksi A1:n mittaista suoraa ristissä 90 asteessa. Lähteen mukaan H toimitetaan kahtena kappaleena, jotta liitinsukupuolten suunnan voi kääntää; layoutin kannalta se on yksi risteys.",
+    "notes": "Kaksi A1:n mittaista suoraa ristissä 90 asteessa. Lähteen mukaan H toimitetaan kahtena kappaleena, jotta liitinsukupuolten suunnan voi kääntää; layoutin kannalta se on yksi risteys. Juuri se tekee palasta peilattavan: peilaus vaihtaa poikittaisen raiteen liitinsukupuolten suunnan päinvastoin, eli valitsee parista toisen kappaleen. Läpimenevän reitin signatuuri ei muutu, joten korvausluokka pysyy samana.",
     "source": "woodenrailway.info Track Guide: H Cross, base A1, length 108 — \"each part is an A1 length\"",
     "routes": [
       { "from": { "id": "in", "connector": "socket" }, "to": { "id": "out", "connector": "pin" }, "path": [{ "straight": 108 }] },

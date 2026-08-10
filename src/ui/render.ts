@@ -3,7 +3,7 @@ import { unionBBox, type BBox } from '../core/path'
 import { placedBBox } from '../core/pieces'
 import { CELL_MM } from '../core/units'
 import type { AreaShape } from '../gen/mask'
-import { buildAreaShape, buildTrackGroup } from './trackSvg'
+import { buildAreaShape, buildGhostGroup, buildTrackGroup } from './trackSvg'
 import type { AppState, Point, ViewTransform } from './state'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -56,6 +56,12 @@ export function render(world: SVGGElement, state: AppState, draft: Point[] | nul
       track.querySelector(`[data-piece-index="${index}"]`)?.classList.add('selected')
     }
     world.appendChild(track)
+  }
+
+  // Haamut radan päälle: ne ovat vaihtoehtoja, joita ei ole vielä olemassa,
+  // ja samalla napautuskohteita (README luku 6).
+  for (const ghost of state.ghosts) {
+    world.appendChild(buildGhostGroup(ghost, library, state.rotated))
   }
 
   if (draft && draft.length >= 2) {

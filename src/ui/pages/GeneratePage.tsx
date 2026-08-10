@@ -2,19 +2,23 @@ import { t } from '../../i18n'
 import { formatCm, formatMetres, formatNumber, formatPercent } from '../../i18n/format'
 import { pieceName } from '../../i18n/pieces'
 import type { PieceLibrary } from '../../core/library'
+import type { ExtendReason } from '../../edit'
 import type { Track } from '../../gen/build'
 import type { GenerateResult } from '../../gen/generate'
 import type { AreaShape } from '../../gen/mask'
 import { ActionBar } from '../components'
 import { describeFailure } from '../failure'
 import {
+  describeBranchOption,
+  describeExtendFailure,
   describeFitFailure,
   describeReplaceFailure,
+  type BranchChoice,
   type DrawingState,
   type EditState,
   type SectionState,
 } from '../drawing'
-import type { HandleId, Point } from '../state'
+import type { Ghost, HandleId, Point } from '../state'
 import { TrackMap } from '../TrackMap'
 
 interface GeneratePageProps {
@@ -27,13 +31,23 @@ interface GeneratePageProps {
   drawMode: boolean
   /** Viimeisin vapaalla kädellä piirretty rata, tai null. */
   drawing: DrawingState | null
+  /** Viimeisin raakaveto haaleana radan alle. */
+  guide: Point[] | null
   /** Käsin muokattu rata, joka syrjäyttää generoidun ja piirretyn. */
   edited: EditState | null
   /** Valittu osio ja sen tehtävänanto, tai null. */
   section: SectionState | null
+  /** Ratkaisematta oleva haarakysymys, tai null. */
+  choice: BranchChoice | null
+  /** Kysymyksen vaihtoehdot haamuina kartalla. */
+  ghosts: Ghost[] | null
+  /** Miksi haaraa ei saatu rataan, tai null. */
+  extendFailure: ExtendReason | null
   onDrawModeChange: (drawing: boolean) => void
   onDraw: (points: Point[]) => void
   onTapPiece: (index: number | null) => void
+  onTapGhost: (index: number) => void
+  onCancelChoice: () => void
   onHandleMove: (handle: HandleId, point: Point) => void
   onSeedChange: (seed: string) => void
   onRegenerate: () => void
@@ -43,7 +57,8 @@ interface GeneratePageProps {
 /**
  * Sivu 3: generointi, piirto ja muokkaus samassa näkymässä (R2). Kartta on
  * sankari, ja epäselvyydet kerrotaan kartan alla olevalla statusrivillä — ei
- * dialogeina. Toimintorivi vaihtuu sen mukaan onko osio valittuna.
+ * dialogeina. Toimintorivi vaihtuu sen mukaan onko osio valittuna vai onko
+ * haarakysymys auki.
  */
 export function GeneratePage({
   area,
@@ -53,11 +68,17 @@ export function GeneratePage({
   seedLabel,
   drawMode,
   drawing,
+  guide,
   edited,
   section,
+  choice,
+  ghosts,
+  extendFailure,
   onDrawModeChange,
   onDraw,
   onTapPiece,
+  onTapGhost,
+  onCancelChoice,
   onHandleMove,
   onSeedChange,
   onRegenerate,
@@ -73,20 +94,31 @@ export function GeneratePage({
         track={track}
         library={library}
         mode={drawMode ? 'draw' : 'view'}
-        guide={edited ? null : drawing?.points ?? null}
+        guide={guide}
         selection={section?.section.indices ?? null}
         handles={section?.handles ?? null}
+        ghosts={ghosts}
         badge={badgeFor(section, track)}
         onDraw={onDraw}
         onTapPiece={onTapPiece}
+        onTapGhost={onTapGhost}
         onHandleMove={onHandleMove}
       />
 
       <div class="map-status">
-        <Status busy={busy} drawing={drawing} edited={edited} result={result} drawMode={drawMode} section={section} />
+        <Status
+          busy={busy}
+          drawing={drawing}
+          edited={edited}
+          result={result}
+          drawMode={drawMode}
+          section={section}
+          choice={choice}
+          extendFailure={extendFailure}
+        />
       </div>
 
-      {section ? null : (
+      {section || choice ? null : (
         <div class="seed-row">
           <label class="seed-label" for="seed-input">
             {t('generate.seed')}
@@ -104,7 +136,18 @@ export function GeneratePage({
         </div>
       )}
 
-      {section ? (
+      {choice ? (
+        <ActionBar>
+          <button type="button" class="action" onClick={onCancelChoice}>
+            {t('branch.cancel')}
+          </button>
+          {choice.options.map((option, index) => (
+            <button key={index} type="button" class="action primary" onClick={() => onTapGhost(index)}>
+              {index + 1}. {describeBranchOption(option)}
+            </button>
+          ))}
+        </ActionBar>
+      ) : section ? (
         <ActionBar>
           <button type="button" class="action" onClick={() => onTapPiece(null)}>
             {t('section.clear')}
@@ -157,24 +200,35 @@ interface StatusProps {
   drawing: DrawingState | null
   edited: EditState | null
   section: SectionState | null
+  choice: BranchChoice | null
+  extendFailure: ExtendReason | null
   result: GenerateResult | null
 }
 
 /** Statusrivi kertoo aina mitä kartalla näkyy ja miksi — myös kun mikään ei onnistunut. */
-function Status({ busy, drawMode, drawing, edited, section, result }: StatusProps) {
+function Status({ busy, drawMode, drawing, edited, section, choice, extendFailure, result }: StatusProps) {
+  if (choice) return <span>{t('branch.choose')}</span>
   if (section) {
     if (drawMode) return <span>{t('section.drawHint')}</span>
     return <SectionStatus section={section} />
   }
   if (drawMode) return <span>{t('draw.hint')}</span>
   if (busy) return <span>{t('generate.working')}</span>
+  if (extendFailure) return <span class="warning">{describeExtendFailure(extendFailure)}</span>
 
   if (edited) {
-    const summary = t('section.replaced', {
-      pieces: formatNumber(edited.pieceCount),
-      length: formatMetres(edited.track.lengthMm),
-      deviation: formatNumber(Math.round(edited.deviationMm)),
-    })
+    const summary =
+      edited.kind === 'branch'
+        ? t('branch.added', {
+            pieces: formatNumber(edited.pieceCount),
+            length: formatMetres(edited.track.lengthMm),
+            change: describeChange(edited),
+          })
+        : t('section.replaced', {
+            pieces: formatNumber(edited.pieceCount),
+            length: formatMetres(edited.track.lengthMm),
+            deviation: formatNumber(Math.round(edited.deviationMm)),
+          })
     if (edited.withinInventory) return <span>{summary}</span>
     return (
       <span>
@@ -245,6 +299,14 @@ function SectionStatus({ section }: { section: SectionState }) {
       {summary} <span class="muted">{t('section.freed', { pieces: describePieces(brief.freed) })}</span>
     </span>
   )
+}
+
+/** Palamuutoskortti (README luku 6): "käyttää 1×L · vapauttaa 1×D". */
+function describeChange(edited: EditState): string {
+  if (!edited.branch) return ''
+  const { added, removed } = edited.branch
+  if (Object.keys(removed).length === 0) return t('branch.uses', { added: describePieces(added) })
+  return t('branch.change', { added: describePieces(added), removed: describePieces(removed) })
 }
 
 /** "2×E, 1×D" — lyhyt lista, ei koko ostoslistaa; se on sivulla 4. */

@@ -141,6 +141,7 @@ vapaassa piirrossa — yksi veto, ja kaksi sormea peruu ja navigoi. Kahvan pää
 alkava veto on aina osion venytystä, ei kartan siirtoa.
 
 Onnistunut korvaus purkaa valinnan (indeksit viittaisivat vanhaan rataan) ja
-jättää muokatun radan näkyviin. Muokattu rata syrjäyttää generoidun ja
+jättää muokatun radan näkyviin. Ilman valintaa radan vierestä alkava veto ei ole
+korvaus vaan uusi haara (`docs/BRANCHING.md`). Muokattu rata syrjäyttää generoidun ja
 piirretyn, kunnes käyttäjä generoi uudelleen tai muuttaa asetuksia — kaikki
 kolme elävät rinnakkain, joten paluu on aina auki.

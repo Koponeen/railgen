@@ -1,11 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { defaultLibrary } from '../core/library'
 import { seedFromInput, seedToString } from '../core/rng'
-import { naturalSection, replaceSection, sectionBrief, slideSectionEnd } from '../edit'
+import {
+  extendTrack,
+  naturalSection,
+  replaceSection,
+  sectionBrief,
+  slideSectionEnd,
+  type BranchOption,
+  type ExtendReason,
+} from '../edit'
 import { fitDrawing } from '../fit'
 import { generate, type GenerateResult } from '../gen/generate'
 import { t } from '../i18n'
-import { handlesOf, type DrawingState, type EditState, type SectionState } from './drawing'
+import {
+  branchSummaryOf,
+  ghostsOf,
+  handlesOf,
+  type BranchChoice,
+  type DrawingState,
+  type EditState,
+  type SectionState,
+} from './drawing'
 import type { HandleId, Point } from './state'
 import { AreaPage } from './pages/AreaPage'
 import { GeneratePage } from './pages/GeneratePage'
@@ -56,9 +72,15 @@ export function App() {
   // generoi uudelleen tai muuttaa asetuksia. Kaikki elävät rinnakkain, joten
   // paluu on aina auki.
   const [drawing, setDrawing] = useState<DrawingState | null>(null)
+  /** Viimeisin raakaveto: se jää kartalle haaleana radan alle (README luku 5). */
+  const [guide, setGuide] = useState<Point[] | null>(null)
   const [edited, setEdited] = useState<EditState | null>(null)
   const [section, setSection] = useState<SectionState | null>(null)
   const [drawMode, setDrawMode] = useState(false)
+  // Ratkaisematta oleva haarakysymys: haamut kartalla odottavat napautusta
+  // (README luku 6 — epäselvyydet ratkaistaan kartalla, ei dialogeilla).
+  const [choice, setChoice] = useState<BranchChoice | null>(null)
+  const [extendFailure, setExtendFailure] = useState<ExtendReason | null>(null)
 
   useEffect(() => {
     saveSettings({ ...settings, seed })
@@ -110,13 +132,43 @@ export function App() {
   const handleTapPiece = useCallback(
     (index: number | null) => {
       setDrawMode(false)
+      // Kysymys on kartalla auki: napautus radan päälle sulkee sen sen sijaan
+      // että valitsisi osion. Vasta sitten kartta palaa katseluun.
+      if (choice) {
+        setChoice(null)
+        return
+      }
       if (index === null || !track) {
         setSection(null)
         return
       }
       selectSection(naturalSection(track, library, index))
     },
-    [track, library, selectSection],
+    [track, library, selectSection, choice],
+  )
+
+  /** Haamun napautus valitsee vaihtoehdon (README luku 6). */
+  const applyBranch = useCallback((option: BranchOption) => {
+    setChoice(null)
+    setExtendFailure(null)
+    setSection(null)
+    setDrawing(null)
+    setEdited({
+      track: option.track,
+      kind: 'branch',
+      pieceCount: option.pieceCount,
+      deviationMm: option.deviation.meanMm,
+      withinInventory: option.withinInventory,
+      branch: branchSummaryOf(option),
+    })
+  }, [])
+
+  const handleTapGhost = useCallback(
+    (index: number) => {
+      const option = choice?.options[index]
+      if (option) applyBranch(option)
+    },
+    [choice, applyBranch],
   )
 
   /** Päätykahva napsahtaa lähimpään palarajaan sormen alla (README luku 6). */
@@ -132,11 +184,14 @@ export function App() {
 
   /**
    * Sovitus on synkronista ja nopeaa, joten se ajetaan suoraan sormen noustessa.
-   * Valittu osio ohjaa vedon korvaukseksi; ilman valintaa veto on uusi rata.
+   * Veto tulkitaan kolmella tavalla: valittu osio ohjaa sen korvaukseksi, radan
+   * vierestä alkava veto on uusi haara, ja muualta alkava veto on uusi rata.
    */
   const handleDraw = useCallback(
     (points: Point[]) => {
       setDrawMode(false)
+      setGuide(points)
+      setExtendFailure(null)
       const options = {
         area: settings.area,
         library,
@@ -154,25 +209,48 @@ export function App() {
         setSection(null)
         setEdited({
           track: replacement.track,
+          kind: 'replace',
           pieceCount: replacement.pieceCount,
           deviationMm: replacement.deviation.meanMm,
           withinInventory: replacement.withinInventory,
+          branch: null,
         })
         return
       }
 
+      // Nappausetäisyydellä alkava veto on lisäävä piirto (README luku 5).
+      // "not-on-track" on ainoa syy palata uuden radan piirtoon: muut syyt
+      // kertovat että käyttäjä tarkoitti haaraa muttei saanut sitä.
+      if (track) {
+        const extended = extendTrack(track, points, options)
+        if (extended.reason !== 'not-on-track') {
+          if (extended.options.length === 0) {
+            setChoice(null)
+            setExtendFailure(extended.reason)
+            return
+          }
+          if (extended.automatic) applyBranch(extended.options[0])
+          else setChoice({ options: extended.options, points })
+          return
+        }
+      }
+
       setEdited(null)
+      setChoice(null)
       setDrawing({ points, result: fitDrawing(points, options) })
     },
-    [settings, library, section, track, selectSection],
+    [settings, library, section, track, selectSection, applyBranch],
   )
 
   /** Asetusten tai siemenen muutos mitätöi kaiken käsityön: se on tehty vanhaan rataan. */
   const resetEdits = () => {
     setDrawing(null)
+    setGuide(null)
     setEdited(null)
     setSection(null)
     setDrawMode(false)
+    setChoice(null)
+    setExtendFailure(null)
   }
 
   const patch = (next: Partial<AppSettings>) => {
@@ -201,11 +279,17 @@ export function App() {
             seedLabel={seed}
             drawMode={drawMode}
             drawing={drawing}
+            guide={edited?.kind === 'replace' ? null : guide}
             edited={edited}
             section={section}
+            choice={choice}
+            ghosts={choice ? ghostsOf(choice.options) : null}
+            extendFailure={extendFailure}
             onDrawModeChange={setDrawMode}
             onDraw={handleDraw}
             onTapPiece={handleTapPiece}
+            onTapGhost={handleTapGhost}
+            onCancelChoice={() => setChoice(null)}
             onHandleMove={handleHandleMove}
             onSeedChange={startOver}
             onRegenerate={() => startOver(randomSeed())}

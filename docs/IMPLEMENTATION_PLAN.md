@@ -52,7 +52,7 @@ src/
   i18n/            # loader + t()
 docs/
   IMPLEMENTATION_PLAN.md
-  PIECE_LIBRARY.md GENERATION.md UI.md DRAWING.md EDITING.md
+  PIECE_LIBRARY.md GENERATION.md UI.md DRAWING.md EDITING.md BRANCHING.md
 ```
 
 ### UI-linjaukset (sitovat)

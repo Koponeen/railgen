@@ -8,7 +8,7 @@ import { cleanDrawing, polylineLength, type CleanOptions } from '../fit/simplify
 import { buildTarget } from '../fit/target'
 import { summariseTrack, type Track } from '../gen/build'
 import { areaBounds, buildMask, type AreaShape } from '../gen/mask'
-import type { Section } from './section'
+import type { Section, TrackChain } from './section'
 
 // Osion korvaus piirtämällä (README luku 6, toteutusjärjestys kohta 3). Sama
 // sovituskoneisto kuin tyhjästä piirtämisessä, mutta molemmat päät ovat
@@ -164,9 +164,16 @@ function distance(a: { x: number; y: number }, b: { x: number; y: number }): num
  * on kiinni muualla radalla. Purettava osio vapauttaa palansa takaisin
  * (README luku 6: "inventaario + purkamisesta vapautuvat palat").
  */
-export function availableInventory(track: Track, section: Section, inventory: Inventory): Inventory {
+export function availableInventory(track: TrackChain, section: Section, inventory: Inventory): Inventory {
+  return availableExcluding(track, new Set(section.indices), inventory)
+}
+
+/**
+ * Sama laskenta mielivaltaiselle purettavalle joukolle: lisäävä piirto purkaa
+ * suoran osuuden mahduttaakseen vaihteen keskelle, eikä sillä ole osiota.
+ */
+export function availableExcluding(track: TrackChain, inside: ReadonlySet<number>, inventory: Inventory): Inventory {
   if (inventory.unlimited) return inventory
-  const inside = new Set(section.indices)
   const elsewhere: Record<string, number> = {}
   track.pieces.forEach((placed, index) => {
     if (inside.has(index)) return
@@ -250,7 +257,7 @@ function assemble(
  * kiinnitetty portti liiku. Sama malli kuin silmukan sauman `relaxClosure`,
  * nyt kahden kiinteän pään välissä.
  */
-function relaxSection(pieces: PlacedPiece[], gap: Vec): void {
+export function relaxSection(pieces: PlacedPiece[], gap: Vec): void {
   const count = pieces.length
   for (let i = 0; i < count; i += 1) {
     const share = (i + 1) / (count + 1)
@@ -273,7 +280,7 @@ interface Spliced {
  * Vaihtaa osion palat uusiin ja rakentaa liitoslistan uudelleen. Muut palat
  * säilyttävät keskinäisen järjestyksensä, uudet tulevat listan loppuun.
  */
-export function splice(track: Track, section: Section, replacement: readonly PlacedPiece[]): Spliced {
+export function splice(track: TrackChain, section: Section, replacement: readonly PlacedPiece[]): Spliced {
   const inside = new Set(section.indices)
   const remap = new Map<number, number>()
   const pieces: PlacedPiece[] = []
@@ -303,7 +310,7 @@ export function splice(track: Track, section: Section, replacement: readonly Pla
 }
 
 /** Liitosten joustokertoimet: liitos joustaa kahden palansa keskiarvon verran. */
-function jointsOf(pieces: readonly PlacedPiece[], joints: readonly [number, number][], library: PieceLibrary): Joint[] {
+export function jointsOf(pieces: readonly PlacedPiece[], joints: readonly [number, number][], library: PieceLibrary): Joint[] {
   return joints.map(([a, b]) => ({
     varioFactor: (library.get(pieces[a].pieceId).varioFactor + library.get(pieces[b].pieceId).varioFactor) / 2,
   }))

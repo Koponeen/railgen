@@ -1,3 +1,4 @@
+import type { PlacedPiece } from '../core/pieces'
 import type { AreaShape } from '../gen/mask'
 import type { Track } from '../gen/build'
 
@@ -30,6 +31,20 @@ export interface SectionHandles {
 
 export type HandleId = keyof SectionHandles
 
+/**
+ * Haamuesikatselu kartalla (README luku 6): yksi vaihtoehto piirrettynä
+ * läpikuultavana radan päälle. Napautus valitsee sen, joten haamu on myös
+ * kosketuskohde.
+ */
+export interface Ghost {
+  /** Vaihtoehdon järjestysnumero; napautus palauttaa tämän. */
+  index: number
+  /** Vain se mikä muuttuu — muu rata on jo kartalla. */
+  pieces: readonly PlacedPiece[]
+  /** Numerolapun paikka maailmakoordinaatistossa. */
+  tag: Point
+}
+
 export interface AppState {
   view: ViewTransform
   mode: Mode
@@ -45,6 +60,14 @@ export interface AppState {
   selection: readonly number[] | null
   /** Päätykahvojen sijainnit kartalla, tai null jos osiota ei ole valittu. */
   handles: SectionHandles | null
+  /** Valittavat vaihtoehdot haamuina radan päällä, tai tyhjä lista. */
+  ghosts: readonly Ghost[]
+  /**
+   * Onko kartta käännetty neljänneskierroksen ruudulle sopimaan? Piirto
+   * tarvitsee tiedon, koska tekstin on pysyttävä pystyssä myös käännetyllä
+   * kartalla — geometria kääntyy, luettava teksti ei.
+   */
+  rotated: boolean
   /**
    * Vapaalla kädellä piirretyt viivat. Sovituksen jälkeen viiva jää kartalle
    * haaleana: käyttäjä näkee mitä hän piirsi ja mitä siitä tuli.
@@ -62,6 +85,8 @@ export function createInitialState(area: AreaShape = DEFAULT_AREA): AppState {
     track: null,
     selection: null,
     handles: null,
+    ghosts: [],
+    rotated: false,
     lines: [],
   }
 }

@@ -40,8 +40,8 @@ yhdellä palalla.
 
 Nykyisestä asemasta (sijainti + suunta + liitin) kokeillaan jokaista palaa:
 suorat ja kaaret molempiin käsiin. Vaihteet ja risteykset eivät ole mukana —
-tyhjästä piirretty rata on yksi ketju, ja haarat tulevat lisäävänä piirtona
-myöhemmässä vaiheessa. Haarautumiskerroin on siis ~14 ja keilan leveys 10.
+tyhjästä piirretty rata on yksi ketju. Haarat ja risteämät tulevat lisäävänä
+piirtona valmiiseen rataan (`docs/BRANCHING.md`). Haarautumiskerroin on siis ~14 ja keilan leveys 10.
 
 Palan hinta muodostuu neljästä osasta:
 
@@ -95,9 +95,12 @@ rehellisen vastauksen sen sijaan että sovitus vain epäonnistuisi.
 ### Mikä hylätään
 
 Silmukka, joka ei sulkeudu budjettiin tai jonka liitos ylittää turvakaton, sekä
-itseensä osuva rata. Risteävä piirto on aito aikomus, mutta sen ratkaisu
-(X-pala tai silta) kuuluu myöhempään vaiheeseen — rikkinäistä rataa ei näytetä
-(CLAUDE.md: rata on joka välivaiheessa ehjä).
+itseensä osuva rata. Risteävä piirto on aito aikomus, ja sen ratkaisu (X-pala
+tai silta) on olemassa — mutta vain lisäävälle piirrolle, jossa ylitettävä rata
+on jo tiedossa (`docs/BRANCHING.md`). Yhdellä vedolla piirretyn radan
+itseleikkaus hylätään yhä, koska rikkinäistä rataa ei näytetä (CLAUDE.md: rata
+on joka välivaiheessa ehjä). Käyttäjä pääsee samaan lopputulokseen piirtämällä
+ensin risteämättömän radan ja lisäämällä risteävän osuuden haarana.
 
 Alueen ylitystä **ei** hylätä, toisin kuin generoinnissa: käyttäjä piirsi viivan
 itse siihen mihin piirsi, ja `track.fitsArea` kertoo asian ilman että työ

@@ -1,9 +1,16 @@
 import type { PieceLibrary } from '../core/library'
 import { samplePath } from '../core/path'
-import { entryFrame, exitFrame, placedPorts, placedSegments, type Frame } from '../core/pieces'
+import {
+  entryFrame,
+  exitFrame,
+  placedPorts,
+  placedSegments,
+  type Frame,
+  type PlacedPiece,
+  type ResolvedPiece,
+} from '../core/pieces'
 import { CELL_MM, TRACK_WIDTH_MM } from '../core/units'
 import type { Vec } from '../core/vec'
-import type { Track } from '../gen/build'
 import { areaOutline, type AreaShape } from '../gen/mask'
 
 // Osion valinta (README luku 6): napautus suoralle osuudelle valitsee koko
@@ -13,6 +20,16 @@ import { areaOutline, type AreaShape } from '../gen/mask'
 //
 // Osio on pelkkä näkymä rataan: se ei omista paloja eikä muuta niitä. Korvaus
 // (replace.ts) rakentaa uuden radan tämän kuvauksen pohjalta.
+
+/**
+ * Se osa radasta, jota osion rajaus tarvitsee. Lisäävä piirto kokoaa rataa
+ * välivaiheissa, joissa mitattuja tunnuslukuja (pituus, törmäykset) ei vielä
+ * ole — rajaus ei niitä kaipaa, joten se pyytää vain palat ja liitokset.
+ */
+export interface TrackChain {
+  pieces: readonly PlacedPiece[]
+  joints: readonly [number, number][]
+}
 
 /** Näin pitkälle päätykahvat liukuvat; pidempi osio ei enää ole "osio". */
 export const MAX_SECTION_PIECES = 14
@@ -52,7 +69,7 @@ export interface Section {
 }
 
 /** Naapuriluettelo liitoksista: pala -> siihen liitetyt palat. */
-export function neighbourLists(track: Track): number[][] {
+export function neighbourLists(track: TrackChain): number[][] {
   const lists = track.pieces.map(() => [] as number[])
   for (const [a, b] of track.joints) {
     if (!lists[a].includes(b)) lists[a].push(b)
@@ -65,12 +82,15 @@ export function neighbourLists(track: Track): number[][] {
  * Pehmeä pala on osuuden sisustaa, kova pala sen raja. Kaaret, vaihteet,
  * rampit ja sillan kannet ovat kovia kohtia (README luku 6).
  */
-function isSoft(track: Track, library: PieceLibrary, index: number): boolean {
-  const piece = library.get(track.pieces[index].pieceId)
+export function isSoftPiece(piece: ResolvedPiece): boolean {
   return piece.kind === 'straight' && !piece.tags.includes('bridge-deck')
 }
 
-function framesOf(track: Track, library: PieceLibrary, index: number): { entry: Frame; exit: Frame } {
+function isSoft(track: TrackChain, library: PieceLibrary, index: number): boolean {
+  return isSoftPiece(library.get(track.pieces[index].pieceId))
+}
+
+function framesOf(track: TrackChain, library: PieceLibrary, index: number): { entry: Frame; exit: Frame } {
   const placed = track.pieces[index]
   const piece = library.get(placed.pieceId)
   return { entry: entryFrame(placed, piece), exit: exitFrame(placed, piece) }
@@ -80,20 +100,20 @@ function framesOf(track: Track, library: PieceLibrary, index: number): { entry: 
  * Onko palalla portti annetussa kehyksessä? Haaraportit lasketaan mukaan, joten
  * risteyksen sivuhaara tunnistetaan naapuriksi siinä missä läpimenevä reittikin.
  */
-function touches(track: Track, library: PieceLibrary, index: number, at: Frame): boolean {
+function touches(track: TrackChain, library: PieceLibrary, index: number, at: Frame): boolean {
   const placed = track.pieces[index]
   const piece = library.get(placed.pieceId)
   return placedPorts(placed, piece).some((port) => Math.hypot(port.x - at.x, port.y - at.y) <= JOIN_EPS_MM)
 }
 
 /** Ketjussa seuraava pala: se naapuri, joka on kiinni tämän palan ulostulossa. */
-function forwardOf(track: Track, library: PieceLibrary, neighbours: number[][], index: number): number | null {
+function forwardOf(track: TrackChain, library: PieceLibrary, neighbours: number[][], index: number): number | null {
   const { exit } = framesOf(track, library, index)
   return neighbours[index].find((other) => touches(track, library, other, exit)) ?? null
 }
 
 /** Ketjussa edellinen pala: se naapuri, joka on kiinni tämän palan sisääntulossa. */
-function backwardOf(track: Track, library: PieceLibrary, neighbours: number[][], index: number): number | null {
+function backwardOf(track: TrackChain, library: PieceLibrary, neighbours: number[][], index: number): number | null {
   const { entry } = framesOf(track, library, index)
   return neighbours[index].find((other) => touches(track, library, other, entry)) ?? null
 }
@@ -102,7 +122,7 @@ function backwardOf(track: Track, library: PieceLibrary, neighbours: number[][],
  * Kokoaa osion valmiiksi järjestetystä palalistasta ja päättelee sen päätyportit
  * sekä korvattavuuden.
  */
-export function makeSection(track: Track, library: PieceLibrary, indices: readonly number[]): Section | null {
+export function makeSection(track: TrackChain, library: PieceLibrary, indices: readonly number[]): Section | null {
   if (indices.length === 0) return null
   const list = [...indices]
   const inside = new Set(list)
@@ -145,7 +165,7 @@ export function makeSection(track: Track, library: PieceLibrary, indices: readon
  * suuntaan, kunnes tulee kova kohta. Kovaa palaa napautettaessa osio on se
  * yksi pala — päätykahvoilla sitä voi sitten venyttää.
  */
-export function naturalSection(track: Track, library: PieceLibrary, index: number): Section | null {
+export function naturalSection(track: TrackChain, library: PieceLibrary, index: number): Section | null {
   if (index < 0 || index >= track.pieces.length) return null
   const neighbours = neighbourLists(track)
   const list = [index]
@@ -181,7 +201,7 @@ export function handlePoint(section: Section, which: 'start' | 'end'): Vec {
  * kerrallaan ja kasvatetaan ketjua pitkin. Nykyinen osio on aina mukana, joten
  * kahvan voi vetää takaisin lähtöpaikkaansa.
  */
-export function slideCandidates(track: Track, library: PieceLibrary, section: Section, which: 'start' | 'end'): Section[] {
+export function slideCandidates(track: TrackChain, library: PieceLibrary, section: Section, which: 'start' | 'end'): Section[] {
   const neighbours = neighbourLists(track)
   const candidates: Section[] = []
 
@@ -209,7 +229,7 @@ export function slideCandidates(track: Track, library: PieceLibrary, section: Se
 
 /** Vetää päätykahvan lähimpään palarajaan. Palauttaa nykyisen osion, jos parempaa ei ole. */
 export function slideSectionEnd(
-  track: Track,
+  track: TrackChain,
   library: PieceLibrary,
   section: Section,
   which: 'start' | 'end',
@@ -245,7 +265,7 @@ export interface SectionBrief {
  * purkamisesta vapautuvat palat. Sama tieto näytetään käyttäjälle ja syötetään
  * myöhemmin autosolverille.
  */
-export function sectionBrief(track: Track, library: PieceLibrary, area: AreaShape, section: Section): SectionBrief {
+export function sectionBrief(track: TrackChain, library: PieceLibrary, area: AreaShape, section: Section): SectionBrief {
   const freed: Record<string, number> = {}
   let lengthMm = 0
   for (const index of section.indices) {
@@ -264,7 +284,7 @@ export function sectionBrief(track: Track, library: PieceLibrary, area: AreaShap
 }
 
 /** Osion keskilinja yhtenä näytteistettynä murtoviivana. */
-export function sectionPolyline(track: Track, library: PieceLibrary, section: Section): Vec[] {
+export function sectionPolyline(track: TrackChain, library: PieceLibrary, section: Section): Vec[] {
   const points: Vec[] = []
   for (const index of section.indices) {
     const placed = track.pieces[index]
@@ -283,7 +303,7 @@ export function sectionPolyline(track: Track, library: PieceLibrary, section: Se
  * mukaan kiinni eivätkä kerro tilasta mitään.
  */
 function corridor(
-  track: Track,
+  track: TrackChain,
   library: PieceLibrary,
   area: AreaShape,
   section: Section,
