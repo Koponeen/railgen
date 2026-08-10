@@ -53,6 +53,8 @@ function rules(palette: TrackPalette): string {
 .handle-knob { fill: ${palette.floor}; stroke: ${palette.accent}; stroke-width: var(--handle-stroke, 10); pointer-events: none; }
 .line.draft { fill: none; stroke: ${palette.accent}; stroke-width: 6; stroke-dasharray: 4 14; stroke-linecap: round; }
 .line.guide { fill: none; stroke: ${palette.accent}; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }
+.gap-line { stroke: ${palette.accent}; stroke-width: 8; stroke-dasharray: 24 24; stroke-linecap: round; }
+.gap-end { fill: none; stroke: ${palette.accent}; stroke-width: 8; }
 .ghost { opacity: 0.55; }
 .ghost .piece-board { stroke: ${palette.accent}; stroke-opacity: 0.35; }
 .ghost .piece-groove { stroke: ${palette.accent}; opacity: 0.7; }

@@ -135,6 +135,8 @@
     "draw": "Draw instead",
     "drawHint": "Draw a new shape for the section. Both ends stay where they are.",
     "clear": "Clear selection",
+    "options": "Options",
+    "remove": "Delete",
     "notReplaceable": "This section cannot be replaced by drawing.",
     "replaced": "Section replaced: {pieces} pieces · track {length} m · off by {deviation} mm",
     "failure": {
@@ -144,7 +146,39 @@
       "no-fit": "No combination of pieces follows that stroke and still ends at the section's end port. Try a gentler shape.",
       "ends-beyond-budget": "The shape does not reach the end ports. Try a gentler shape, or stretch the selection with the handles.",
       "joint-over-safety-cap": "One joint would be too sharp. Draw a gentler shape.",
-      "self-collision": "The new run would hit the rest of the track. Draw it on the other side."
+      "self-collision": "The new run would hit the rest of the track. Draw it on the other side.",
+      "no-options": "No options were found for this run. Stretch the selection with the handles, or add pieces."
+    }
+  },
+  "gap": {
+    "open": "Gap of {length} cm. Fill it, draw instead, or undo.",
+    "fill": "Fill",
+    "undo": "Undo",
+    "failure": {
+      "unknown": "The gap could not be filled.",
+      "section-not-removable": "This section cannot be deleted: a branch leaves from its middle, or it covers the whole track.",
+      "no-fill": "The gap cannot be filled with straights: its ends are not on the same line. Draw instead.",
+      "ends-beyond-budget": "The filling does not reach the end ports. Stretch the selection with the handles.",
+      "joint-over-safety-cap": "One joint would be too sharp.",
+      "self-collision": "The filling would hit the rest of the track."
+    }
+  },
+  "edit": {
+    "choose": "Pick an option on the map.",
+    "applied": "{what}: {pieces} pieces · track {length} m · {change}"
+  },
+  "swap": {
+    "option": "Swap in {piece}"
+  },
+  "variation": {
+    "name": {
+      "siding": "Siding",
+      "passing-loop": "Passing loop",
+      "s-bend": "S-bend",
+      "bulge": "Bulge",
+      "hill": "Hill",
+      "skew": "Skew stretch",
+      "junction": "Crossing and branch"
     }
   },
   "result": {

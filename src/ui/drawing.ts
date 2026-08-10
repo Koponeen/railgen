@@ -1,6 +1,17 @@
 import { t } from '../i18n'
+import { pieceName } from '../i18n/pieces'
+import { variationName } from '../i18n/variations'
 import type { FitReason, FitResult } from '../fit'
-import type { BranchOption, ExtendReason, ReplaceReason, Section, SectionBrief } from '../edit'
+import type {
+  BranchOption,
+  ExtendReason,
+  FillGapReason,
+  GapMarker,
+  ReplaceReason,
+  Section,
+  SectionBrief,
+  SolveOption,
+} from '../edit'
 import type { Track } from '../gen/build'
 import type { Ghost, Point, SectionHandles } from './state'
 
@@ -12,51 +23,132 @@ export interface DrawingState {
   result: FitResult
 }
 
-/** Valittu osio: rajaus, tehtävänanto ja viimeisin epäonnistunut korvausyritys. */
+/**
+ * Miksi osiolle ei tullut uutta muotoa. Yritykset ovat eri koneistoja ja siksi
+ * eri syitä: piirretty korvaus, automaattinen täyttö ja autosolverin tyhjä
+ * vastaus sanovat kukin omin sanoin mitä tapahtui.
+ */
+export type SectionNote =
+  | { kind: 'replace'; reason: ReplaceReason }
+  | { kind: 'fill'; reason: FillGapReason }
+  | { kind: 'no-options' }
+
+/** Valittu osio: rajaus, tehtävänanto ja viimeisin epäonnistunut yritys. */
 export interface SectionState {
   section: Section
   brief: SectionBrief
   handles: SectionHandles
-  failure: ReplaceReason | null
+  note: SectionNote | null
 }
+
+/**
+ * Poistettu osio odottamassa ratkaisuaan (README luku 6): kartalla näkyy
+ * aukkomerkki, ja käyttäjä joko täyttää sen, piirtää tilalle tai kumoaa. Rata
+ * itse on yhä alkuperäinen — esikatselu ei ole se rata jota muokataan.
+ */
+export interface RemovalState {
+  preview: Track
+  gap: GapMarker
+}
+
+/** Mikä muokkaus radalle viimeksi tehtiin. */
+export type EditKind = 'replace' | 'branch' | 'variation' | 'swap' | 'fill'
 
 /** Käsin muokattu rata. Elää generoidun ja piirretyn rinnalla, joten paluu on aina auki. */
 export interface EditState {
   track: Track
-  /** Kumpi muokkaus tämä oli: osion korvaus vai uusi haara. */
-  kind: 'replace' | 'branch'
+  kind: EditKind
+  /** Mitä tehtiin, valmiiksi käännettynä: "Sivuraide", "Haara (L)". */
+  label: string | null
   /** Viimeisimmän muokkauksen mitat statusriville. */
   pieceCount: number
   deviationMm: number
   withinInventory: boolean
-  /** Haaran palamuutoskortti (README luku 6), jos muokkaus oli haara. */
-  branch: BranchSummary | null
-}
-
-export interface BranchSummary {
-  junctionId: string
-  crossing: BranchOption['crossing']
-  crossingId: string | null
-  added: Record<string, number>
-  removed: Record<string, number>
+  /** Palamuutoskortti (README luku 6), nettona. */
+  change: { added: Record<string, number>; removed: Record<string, number> } | null
 }
 
 /**
- * Ratkaisematta oleva kysymys: 2–3 vaihtoehtoa, joista käyttäjä valitsee
+ * Yksi ratkaisematta oleva vaihtoehto. Haara, variaatiokuvio ja palan vaihto
+ * tulevat eri koneistoista, mutta kartalle ja toimintoriville ne menevät
+ * samanlaisina — haamu, nimilappu ja palamuutoskortti.
+ */
+export interface ChoiceOption {
+  kind: EditKind
+  label: string
+  track: Track
+  /** Haamuesikatselun palat radan `pieces`-indekseinä. */
+  addedIndices: number[]
+  /** Mille paloille numerolappu asetetaan; haaralla se on haaran oma ketju. */
+  tagIndices: number[]
+  added: Record<string, number>
+  removed: Record<string, number>
+  pieceCount: number
+  withinInventory: boolean
+}
+
+/**
+ * Ratkaisematta oleva kysymys: 2–4 vaihtoehtoa, joista käyttäjä valitsee
  * napauttamalla haamua kartalla. Piirretty viiva säilyy, jotta kartalla näkyy
  * yhä se mitä käyttäjä pyysi.
  */
-export interface BranchChoice {
-  options: BranchOption[]
-  points: Point[]
+export interface EditChoice {
+  options: ChoiceOption[]
+  points: Point[] | null
 }
 
-export function branchSummaryOf(option: BranchOption): BranchSummary {
+/** Haaravaihtoehto kartalle vietäväksi. */
+export function branchChoice(options: readonly BranchOption[], points: Point[]): EditChoice {
   return {
-    junctionId: option.junctionId,
-    crossing: option.crossing,
-    crossingId: option.crossingId,
-    ...netChange(option.added, option.removed),
+    points,
+    options: options.map((option) => ({
+      kind: 'branch' as const,
+      label: describeBranchOption(option),
+      track: option.track,
+      addedIndices: option.addedIndices,
+      // Vaihtoehdot lähtevät samasta kohdasta ja eroavat vasta myöhemmin, joten
+      // numerolappu asetetaan haaran omalle ketjulle eikä koko muutokselle.
+      tagIndices: tailIndices(option.track, option.pieceCount),
+      added: option.added,
+      removed: option.removed,
+      pieceCount: option.pieceCount,
+      withinInventory: option.withinInventory,
+    })),
+  }
+}
+
+/** Autosolverin ehdotus kartalle vietäväksi. */
+export function solveChoice(options: readonly SolveOption[]): EditChoice {
+  return {
+    points: null,
+    options: options.map((option) => ({
+      kind: option.kind,
+      label: option.kind === 'swap' ? t('swap.option', { piece: pieceName(option.id) }) : variationName(option.family),
+      track: option.track,
+      addedIndices: option.addedIndices,
+      tagIndices: option.addedIndices,
+      added: option.added,
+      removed: option.removed,
+      pieceCount: option.pieceCount,
+      withinInventory: option.withinInventory,
+    })),
+  }
+}
+
+function tailIndices(track: Track, count: number): number[] {
+  return Array.from({ length: Math.min(count, track.pieces.length) }, (_, i) => track.pieces.length - count + i)
+}
+
+/** Valittu vaihtoehto muokkaustilaksi. */
+export function editStateOf(option: ChoiceOption): EditState {
+  return {
+    track: option.track,
+    kind: option.kind,
+    label: option.label,
+    pieceCount: option.pieceCount,
+    deviationMm: 0,
+    withinInventory: option.withinInventory,
+    change: netChange(option.added, option.removed),
   }
 }
 
@@ -79,24 +171,28 @@ export function netChange(
 }
 
 /** Haamut kartalle: vain ne palat, jotka vaihtoehto lisäisi tai siirtäisi. */
-export function ghostsOf(options: readonly BranchOption[]): Ghost[] {
+export function ghostsOf(options: readonly ChoiceOption[]): Ghost[] {
   return options.map((option, index) => ({
     index,
     pieces: option.addedIndices.map((pieceIndex) => option.track.pieces[pieceIndex]),
-    tag: tagPoint(option.track.pieces.slice(option.track.pieces.length - option.pieceCount), index, options.length),
+    tag: tagPoint(
+      option.tagIndices.map((pieceIndex) => option.track.pieces[pieceIndex]?.placement),
+      index,
+      options.length,
+    ),
   }))
 }
 
 /**
- * Numerolapun paikka haaran omalta ketjulta. Vaihtoehdot lähtevät samasta
- * kohdasta ja eroavat vasta myöhemmin, joten kukin lappu asetetaan eri kohtaan
- * omaa haaraansa — muuten ne kasautuisivat päällekkäin eikä alimpaan voisi
- * osua sormella lainkaan.
+ * Numerolapun paikka vaihtoehdon omalta ketjulta. Vaihtoehdot ovat samassa
+ * kohdassa rataa, joten kukin lappu asetetaan eri kohtaan omaa muutostaan —
+ * muuten ne kasautuisivat päällekkäin eikä alimpaan voisi osua sormella.
  */
-function tagPoint(branch: readonly { placement: Point }[], index: number, count: number): Point {
-  if (branch.length === 0) return { x: 0, y: 0 }
+function tagPoint(points: readonly (Point | undefined)[], index: number, count: number): Point {
+  const usable = points.filter((point): point is Point => point !== undefined)
+  if (usable.length === 0) return { x: 0, y: 0 }
   const share = (index + 1) / (count + 1)
-  return branch[Math.round((branch.length - 1) * share)].placement
+  return usable[Math.round((usable.length - 1) * share)]
 }
 
 const KNOWN_FIT_REASONS = new Set<FitReason>([
@@ -116,14 +212,26 @@ const KNOWN_REPLACE_REASONS = new Set<ReplaceReason>([
   'self-collision',
 ])
 
+const KNOWN_GAP_REASONS = new Set<FillGapReason>([
+  'section-not-removable',
+  'no-fill',
+  'ends-beyond-budget',
+  'joint-over-safety-cap',
+  'self-collision',
+])
+
 /** Rehellinen syy sille, miksi vedosta ei tullut rataa (README luku 5). */
 export function describeFitFailure(reason: FitReason): string {
   return KNOWN_FIT_REASONS.has(reason) ? t(`draw.failure.${reason}`) : t('draw.failure.unknown')
 }
 
-/** Rehellinen syy sille, miksi osiota ei voitu korvata (README luku 6). */
-export function describeReplaceFailure(reason: ReplaceReason): string {
-  return KNOWN_REPLACE_REASONS.has(reason) ? t(`section.failure.${reason}`) : t('section.failure.unknown')
+/** Rehellinen syy sille, miksi osiolle ei tullut uutta muotoa (README luku 6). */
+export function describeSectionNote(note: SectionNote): string {
+  if (note.kind === 'no-options') return t('section.failure.no-options')
+  if (note.kind === 'fill') {
+    return KNOWN_GAP_REASONS.has(note.reason) ? t(`gap.failure.${note.reason}`) : t('gap.failure.unknown')
+  }
+  return KNOWN_REPLACE_REASONS.has(note.reason) ? t(`section.failure.${note.reason}`) : t('section.failure.unknown')
 }
 
 const KNOWN_EXTEND_REASONS = new Set<ExtendReason>([

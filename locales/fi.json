@@ -135,6 +135,8 @@
     "draw": "Piirrä tilalle",
     "drawHint": "Piirrä osion tilalle uusi muoto. Päät pysyvät paikallaan.",
     "clear": "Poista valinta",
+    "options": "Vaihtoehdot",
+    "remove": "Poista",
     "notReplaceable": "Tätä osiota ei voi korvata piirtämällä.",
     "replaced": "Osio korvattu: {pieces} palaa · rata {length} m · poikkeama {deviation} mm",
     "failure": {
@@ -144,7 +146,39 @@
       "no-fit": "Viivalle ei löytynyt palayhdistelmää, joka päättyisi osion loppuporttiin. Kokeile loivempaa muotoa.",
       "ends-beyond-budget": "Muoto ei ylety päätyportteihin. Kokeile loivempaa muotoa tai venytä valintaa kahvoista.",
       "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi. Piirrä loivempi muoto.",
-      "self-collision": "Uusi osuus osuisi muuhun rataan. Piirrä se toiselle puolelle."
+      "self-collision": "Uusi osuus osuisi muuhun rataan. Piirrä se toiselle puolelle.",
+      "no-options": "Tälle osuudelle ei löytynyt vaihtoehtoja. Venytä valintaa kahvoista tai lisää paloja."
+    }
+  },
+  "gap": {
+    "open": "Aukko {length} cm. Täytä, piirrä tilalle tai kumoa.",
+    "fill": "Täytä",
+    "undo": "Kumoa",
+    "failure": {
+      "unknown": "Aukkoa ei voitu täyttää.",
+      "section-not-removable": "Tätä osiota ei voi poistaa: sen keskeltä lähtee haara tai se kattaa koko radan.",
+      "no-fill": "Aukkoa ei voi täyttää suorilla: sen päät eivät ole samalla linjalla. Piirrä tilalle.",
+      "ends-beyond-budget": "Täyttö ei ylety päätyportteihin. Venytä valintaa kahvoista.",
+      "joint-over-safety-cap": "Yksi liitos jäisi liian jyrkäksi.",
+      "self-collision": "Täyttö osuisi muuhun rataan."
+    }
+  },
+  "edit": {
+    "choose": "Valitse vaihtoehto kartalta.",
+    "applied": "{what}: {pieces} palaa · rata {length} m · {change}"
+  },
+  "swap": {
+    "option": "Vaihda {piece}"
+  },
+  "variation": {
+    "name": {
+      "siding": "Sivuraide",
+      "passing-loop": "Ohituskaide",
+      "s-bend": "S-kiemura",
+      "bulge": "Pullistuma",
+      "hill": "Mäki",
+      "skew": "Viisto venytys",
+      "junction": "Risteys ja haara"
     }
   },
   "result": {

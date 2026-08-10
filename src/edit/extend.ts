@@ -1,19 +1,19 @@
-import { buildFillTable, type FillTable } from '../core/fill'
-import { Ledger, createInventory, shortagesAgainst, unlimitedInventory, type Inventory } from '../core/inventory'
+import { inventoryFillTable, type FillTable } from '../core/fill'
+import { Ledger, createInventory, unlimitedInventory, type Inventory } from '../core/inventory'
 import { defaultLibrary, type PieceLibrary } from '../core/library'
 import { samplePath } from '../core/path'
 import { placedSegments, type Frame, type PlacedPiece } from '../core/pieces'
 import type { Vec } from '../core/vec'
-import { evaluateClosure, type ClosureReport, type FlexSettings, type VarioSettings } from '../core/vario'
+import type { FlexSettings, VarioSettings } from '../core/vario'
 import { beamFit, type BeamFit, type FitTuning } from '../fit/beam'
 import { cleanDrawing, polylineLength, type CleanOptions } from '../fit/simplify'
 import { buildTarget } from '../fit/target'
-import { summariseTrack, type Track } from '../gen/build'
+import type { Track } from '../gen/build'
 import { buildElementLibrary, bundledElementSpecs, type ElementLibrary } from '../gen/elements'
 import { areaBounds, buildMask, type AreaShape } from '../gen/mask'
+import { assembleTrack, countUsage } from './assemble'
 import { branchAnchors, BRANCH_SNAP_MM, type BranchAnchor } from './branch'
 import { bridgeOver, findCrossings, levelCrossings, type CrossingSite } from './crossing'
-import { jointsOf } from './replace'
 import type { TrackChain } from './section'
 
 // Lisäävä piirto (README luku 5 "Haara mutkaan", luku 6 "risteämiskyselyt").
@@ -150,7 +150,7 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
   const points = orientFromTrack(drawing.points, track, library, snapMm)
   if (!points) return failure('not-on-track')
 
-  const table = fillTableFor(library, inventory)
+  const table = inventoryFillTable(library, inventory)
   const anchors = branchAnchors(track, library, table, inventory, points[0], { snapMm, limit: MAX_ANCHORS })
   if (anchors.length === 0) return failure('no-branch-point')
 
@@ -241,7 +241,7 @@ function fitLeg(
 
   return beamFit(buildTarget({ points: anchored, closed: false, lengthMm: polylineLength(anchored) }), {
     library: context.library,
-    inventory: minus(context.inventory, usageOf(base)),
+    inventory: minus(context.inventory, countUsage(base)),
     tuning: { ...BRANCH_TUNING, ...context.options.tuning },
     allowConnectorFlip: context.options.allowConnectorFlip,
     start: [start],
@@ -303,31 +303,13 @@ function attach(
 
   // Haarakohdan päätyheitto kuuluu sen omalle osuudelle: se on syntynyt siinä
   // ja sen on mahduttava siihen (sama malli kuin osion korvauksessa).
-  if (localJoints.length > 0) {
-    const local = evaluateClosure(jointsOf(pieces, localJoints, library), { gapMm, angleDeg: 0 }, {
-      settings: options.vario,
-      flex: options.flex,
-    })
-    if (!local.withinBudget) return { option: null, reason: 'ends-beyond-budget' }
-    if (!local.withinCaps) return { option: null, reason: 'joint-over-safety-cap' }
-  }
-
-  const usage = usageOf(pieces)
-  const next = summariseTrack(
-    {
-      pieces,
-      joints,
-      closure: combinedClosure(context, pieces, joints, gapMm),
-      usage,
-      shortages: shortagesAgainst(usage, context.inventory),
-      areaBounds: context.bounds,
-    },
-    library,
+  const assembled = assembleTrack(
+    context.track,
+    { pieces, joints, localJoints, gapMm },
+    { library, inventory: context.inventory, vario: options.vario, flex: options.flex, bounds: context.bounds },
   )
-
-  // Haara ei saa tuoda uutta törmäystä. Vertailu alkuperäiseen eikä nollaan,
-  // koska monitasoisessa radassa laskuri voi olla valmiiksi nollaa suurempi.
-  if (next.collisions > context.track.collisions) return { option: null, reason: 'self-collision' }
+  const next = assembled.track
+  if (!next) return { option: null, reason: assembled.reason }
 
   const removed = { ...anchor.removed }
   const added = { ...anchor.added }
@@ -352,24 +334,6 @@ function attach(
   }
 }
 
-/**
- * Koko radan sulkeutumisraportti haaran jälkeen. Silmukan alkuperäinen sauma on
- * yhä olemassa, ja haarakohdan osuusheitto lisää siihen omansa —
- * kireysprosentti kertoo yhteissumman.
- */
-function combinedClosure(
-  context: Context,
-  pieces: readonly PlacedPiece[],
-  joints: readonly [number, number][],
-  gapMm: number,
-): ClosureReport {
-  return evaluateClosure(
-    jointsOf(pieces, joints, context.library),
-    { gapMm: context.track.closure.error.gapMm + gapMm, angleDeg: context.track.closure.error.angleDeg },
-    { settings: context.options.vario, flex: context.options.flex },
-  )
-}
-
 // --- Risteämän ratkaisu ------------------------------------------------------
 
 /** Silta: uusi ketju nostetaan vanhan radan yli mäkielementillä. */
@@ -379,7 +343,7 @@ function bridgeOptions(context: Context, anchor: BranchAnchor, fit: BeamFit, sit
     context.library,
     context.elements,
     context.table,
-    minus(context.inventory, usageOf(anchor.pieces)),
+    minus(context.inventory, countUsage(anchor.pieces)),
     site,
   )
   if (!bridged) return []
@@ -478,15 +442,6 @@ function splitAt(points: readonly Vec[], at: Vec): { head: Vec[]; tail: Vec[] } 
 
 // --- Apurit ------------------------------------------------------------------
 
-function fillTableFor(library: PieceLibrary, inventory: Inventory): FillTable {
-  return buildFillTable(
-    library
-      .fillerStraights()
-      .filter((piece) => inventory.unlimited || (inventory.counts[piece.id] ?? 0) > 0)
-      .map((piece) => piece.straightLengthMm as number),
-  )
-}
-
 /**
  * Kääntää vedon niin, että sen alku on radalla. Jos kumpikaan pää ei ole
  * nappausetäisyydellä, veto ei ole haara vaan uusi rata.
@@ -509,12 +464,6 @@ export function distanceToTrack(point: Vec, track: TrackChain, library: PieceLib
     }
   }
   return best
-}
-
-function usageOf(pieces: readonly PlacedPiece[]): Record<string, number> {
-  const usage: Record<string, number> = {}
-  for (const placed of pieces) usage[placed.pieceId] = (usage[placed.pieceId] ?? 0) + 1
-  return usage
 }
 
 /** Kokoelma, josta jo käytetty on vähennetty. */

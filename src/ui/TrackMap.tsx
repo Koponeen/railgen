@@ -3,7 +3,7 @@ import type { PieceLibrary } from '../core/library'
 import type { Track } from '../gen/build'
 import type { AreaShape } from '../gen/mask'
 import { mountMapEngine, type MapEngineHandle, type MapEngineSnapshot } from './mapEngine'
-import type { Ghost, HandleId, Mode, Point, SectionHandles } from './state'
+import type { GapMark, Ghost, HandleId, Mode, Point, SectionHandles } from './state'
 import { screenTrackCss } from './trackStyles'
 
 interface TrackMapProps {
@@ -20,6 +20,8 @@ interface TrackMapProps {
   handles?: SectionHandles | null
   /** Valittavat vaihtoehdot haamuina radan päällä. */
   ghosts?: readonly Ghost[] | null
+  /** Poistetun osion jättämä aukko, tai null. */
+  gap?: GapMark | null
   /** Pieni tunnus kartan kulmassa, esim. valitun osion mitta. */
   badge?: string | null
   onChange?: (snapshot: MapEngineSnapshot) => void
@@ -45,6 +47,7 @@ export function TrackMap({
   selection,
   handles,
   ghosts,
+  gap,
   badge,
   onChange,
   onDraw,
@@ -88,7 +91,7 @@ export function TrackMap({
       localSvgRef.current,
       worldRef.current,
       library,
-      { area, track, guide, selection, handles, ghosts, rotated },
+      { area, track, guide, selection, handles, ghosts, gap, rotated },
       {
         onChange(snapshot) {
           handlers.current.onChange?.(snapshot)
@@ -120,8 +123,8 @@ export function TrackMap({
   }, [library])
 
   useEffect(() => {
-    engineRef.current?.update({ area, track, guide, selection, handles, ghosts, rotated })
-  }, [area, track, guide, selection, handles, ghosts, rotated])
+    engineRef.current?.update({ area, track, guide, selection, handles, ghosts, gap, rotated })
+  }, [area, track, guide, selection, handles, ghosts, gap, rotated])
 
   useEffect(() => {
     engineRef.current?.setMode(mode)

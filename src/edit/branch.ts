@@ -1,4 +1,4 @@
-import { fillableLengths, isFillable, solveFill, type FillTable } from '../core/fill'
+import { fillableLengths, isFillable, nearestFillable, solveFill, type FillTable } from '../core/fill'
 import { Ledger, type Inventory } from '../core/inventory'
 import type { PieceLibrary } from '../core/library'
 import { samplePath } from '../core/path'
@@ -56,11 +56,21 @@ const SAMPLE_STEP_MM = 20
 export interface RunCoreResult {
   placed: PlacedPiece[]
   exit: Frame
+  /**
+   * Ytimen omat liitokset `placed`-indekseinä. Oletus on peräkkäinen ketju;
+   * sivuraiteellinen ydin (autosolverin variaatio) kertoo ne itse.
+   */
+  edges?: [number, number][]
+  /** Ytimen pääketjun viimeinen pala; oletus on taulukon viimeinen. */
+  exitIndex?: number
+  /** Ytimen sisäinen sulkeutumisjäännös, esim. ohituskaiteen umpisilmukka. */
+  gapMm?: number
 }
 
 /**
- * Osuudelle upotettava ydin: vaihde, risteys tai kokonainen silta. Ydin osaa
- * sijoittaa itsensä mihin tahansa kohdistimeen, ja täyttö hoitaa loput.
+ * Osuudelle upotettava ydin: vaihde, risteys, silta tai kokonainen
+ * variaatiokuvio. Ydin osaa sijoittaa itsensä mihin tahansa kohdistimeen, ja
+ * täyttö hoitaa loput.
  */
 export type RunCore = (cursor: Frame) => RunCoreResult | null
 
@@ -187,6 +197,18 @@ function chooseOffset(
   return best
 }
 
+export interface RunInsertOptions {
+  /** Mihin väliin ytimen ankkuri saa asettua osuudella. */
+  range?: { minMm: number; maxMm: number }
+  /**
+   * Saako täyttö jäädä vajaaksi? Suorista koottu ydin osuu mikrogridiin ja
+   * täyttyy eksaktisti, mutta kaarista koottu ei (45° → √2). Silloin täyttö
+   * napsautetaan lähimpään täytettävään pituuteen ja jäännös jää Varion
+   * nieltäväksi — sama toleranssibudjetti kuin silmukan saumassa.
+   */
+  snapFill?: boolean
+}
+
 /**
  * Upottaa palan suoralle osuudelle annettuun kohtaan ja täyttää sen molemmin
  * puolin. Osuuden pituus säilyy, joten muu rata ei liiku — juuri tämä tekee
@@ -200,7 +222,7 @@ export function insertIntoRun(
   section: Section,
   core: RunCore,
   targetAlongMm: number,
-  range?: { minMm: number; maxMm: number },
+  options: RunInsertOptions = {},
 ): RunInsertion | null {
   if (!section.replaceable) return null
   const runMm = nominalLength(track, library, section.indices)
@@ -211,12 +233,18 @@ export function insertIntoRun(
   if (!probe || probe.exit.dir !== section.start.dir || probe.exit.level !== section.start.level) return null
 
   const throughMm = Math.hypot(probe.exit.x - section.start.x, probe.exit.y - section.start.y)
-  const slackMm = runMm - throughMm
-  if (slackMm < -EPS_MM) return null
+  const rawSlackMm = runMm - throughMm
+  if (rawSlackMm < -EPS_MM) return null
+
+  // Napsautettu täyttö jää vajaaksi tai menee yli; erotus näkyy suoraan
+  // päätyheittona, koska ketjun loppukohdistin lasketaan joka tapauksessa
+  // geometriasta.
+  const slackMm = options.snapFill ? nearestFillable(table, rawSlackMm) : rawSlackMm
+  if (slackMm === null) return null
 
   // Ydin liukuu osuudella, mutta sen sijainti mitataan sen omasta ankkurista:
   // risteyspalan on osuttava kohtaan, jossa piirretty viiva ylittää radan.
-  const alongMm = chooseOffset(table, slackMm, targetAlongMm, range)
+  const alongMm = chooseOffset(table, slackMm, targetAlongMm, options.range)
   if (alongMm === null) return null
 
   const available = availableExcluding(track, new Set(section.indices), inventory)
@@ -246,33 +274,50 @@ function buildRun(
   if (!tail) return null
 
   const replacement: PlacedPiece[] = []
+  const edges: [number, number][] = []
   let cursor = section.start
+  /** Ketjun viimeisin pala: seuraava liittyy tähän, ei taulukon loppuun. */
+  let previous = -1
 
   const append = (pieceId: string): boolean => {
     const result = placeAtFrame(library.get(pieceId), cursor)
     if (!result) return false
-    replacement.push(result.placed)
+    const index = replacement.push(result.placed) - 1
+    if (previous >= 0) edges.push([previous, index])
+    previous = index
     cursor = result.exit
     return true
   }
 
   for (const id of head) if (!append(id)) return null
+
   const placedCore = core(cursor)
   if (!placedCore) return null
   const coreStart = replacement.length
-  replacement.push(...placedCore.placed)
-  cursor = placedCore.exit
+  if (placedCore.placed.length > 0) {
+    replacement.push(...placedCore.placed)
+    for (const [a, b] of placedCore.edges ?? consecutive(placedCore.placed.length)) {
+      edges.push([coreStart + a, coreStart + b])
+    }
+    if (previous >= 0) edges.push([previous, coreStart])
+    // Sivuraiteen puskuri on taulukossa viimeisenä muttei ketjussa: ketju
+    // jatkuu ytimen pääreitin päästä.
+    previous = coreStart + (placedCore.exitIndex ?? placedCore.placed.length - 1)
+    cursor = placedCore.exit
+  }
+
   for (const id of tail) if (!append(id)) return null
+  if (replacement.length === 0) return null
 
   // Osuuden on päädyttävä samaan porttiin kuin ennenkin — suunta, taso ja
   // liittimen sukupuoli täsmälleen, sijainnin heiton nielee Vario.
   if (cursor.dir !== section.end.dir || cursor.level !== section.end.level || cursor.open !== section.end.open) return null
 
   const gap: Vec = { x: cursor.x - section.end.x, y: cursor.y - section.end.y }
-  const gapMm = Math.hypot(gap.x, gap.y)
+  const gapMm = Math.hypot(gap.x, gap.y) + (placedCore.gapMm ?? 0)
   relaxSection(replacement, gap)
 
-  const spliced = splice(track, section, replacement)
+  const spliced = splice(track, section, replacement, { edges, entry: 0, exit: previous })
   const first = track.pieces.length - section.indices.length
 
   return {
@@ -285,6 +330,12 @@ function buildRun(
     removed: countOf(section.indices.map((i) => track.pieces[i].pieceId)),
     alongMm: headMm,
   }
+}
+
+function consecutive(count: number): [number, number][] {
+  const edges: [number, number][] = []
+  for (let i = 1; i < count; i += 1) edges.push([i - 1, i])
+  return edges
 }
 
 /** Yhden palan ydin: sijoitus annetussa kulkusuunnassa. */
@@ -507,7 +558,7 @@ export function swapAnchors(
 }
 
 /** Sijoitus, joka alkaa samasta kehyksestä ja päätyy samaan päätyporttiin. */
-function swapPlacement(piece: ResolvedPiece, entry: Frame, exit: Frame): PlacedPiece | null {
+export function swapPlacement(piece: ResolvedPiece, entry: Frame, exit: Frame): PlacedPiece | null {
   const mirrors = piece.mirrorable ? [false, true] : [false]
   for (const order of portOrders(piece)) {
     for (const mirror of mirrors) {

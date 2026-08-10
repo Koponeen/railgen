@@ -19,6 +19,7 @@ export {
   branchingPieces,
   insertIntoRun,
   pieceCore,
+  swapPlacement,
   type BranchAnchor,
   type RunCore,
   type RunInsertion,
@@ -50,3 +51,23 @@ export {
   type ReplaceReason,
   type ReplaceResult,
 } from './replace'
+export { assembleTrack, type AssembleReason } from './assemble'
+export { swapOptions, type SwapOption, type SwapOptions } from './swap'
+export {
+  fillGap,
+  removeSection,
+  type FillGapReason,
+  type FillGapResult,
+  type GapMarker,
+  type RemoveOptions,
+  type RemoveReason,
+  type RemoveResult,
+} from './remove'
+export { solveSection, type SolveOption, type SolveOptions } from './solve'
+export {
+  bundledVariationSpecs,
+  resolveVariation,
+  type ResolvedVariation,
+  type VariationSpec,
+  type VariationStep,
+} from './variations'

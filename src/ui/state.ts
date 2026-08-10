@@ -29,6 +29,16 @@ export interface SectionHandles {
   end: Point
 }
 
+/**
+ * Aukkomerkki (README luku 6): poistettu osio jättää radan auki, ja kartta
+ * kertoo sen katkoviivalla päätyporttien välissä. Merkki ei ole rataa vaan
+ * kysymys — käyttäjä täyttää, piirtää tai kumoaa.
+ */
+export interface GapMark {
+  start: Point
+  end: Point
+}
+
 export type HandleId = keyof SectionHandles
 
 /**
@@ -62,6 +72,8 @@ export interface AppState {
   handles: SectionHandles | null
   /** Valittavat vaihtoehdot haamuina radan päällä, tai tyhjä lista. */
   ghosts: readonly Ghost[]
+  /** Poistetun osion jättämä aukko, tai null. */
+  gap: GapMark | null
   /**
    * Onko kartta käännetty neljänneskierroksen ruudulle sopimaan? Piirto
    * tarvitsee tiedon, koska tekstin on pysyttävä pystyssä myös käännetyllä
@@ -86,6 +98,7 @@ export function createInitialState(area: AreaShape = DEFAULT_AREA): AppState {
     selection: null,
     handles: null,
     ghosts: [],
+    gap: null,
     rotated: false,
     lines: [],
   }

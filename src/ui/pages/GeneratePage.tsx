@@ -9,13 +9,13 @@ import type { AreaShape } from '../../gen/mask'
 import { ActionBar } from '../components'
 import { describeFailure } from '../failure'
 import {
-  describeBranchOption,
   describeExtendFailure,
   describeFitFailure,
-  describeReplaceFailure,
-  type BranchChoice,
+  describeSectionNote,
   type DrawingState,
+  type EditChoice,
   type EditState,
+  type RemovalState,
   type SectionState,
 } from '../drawing'
 import type { Ghost, HandleId, Point } from '../state'
@@ -37,8 +37,10 @@ interface GeneratePageProps {
   edited: EditState | null
   /** Valittu osio ja sen tehtävänanto, tai null. */
   section: SectionState | null
-  /** Ratkaisematta oleva haarakysymys, tai null. */
-  choice: BranchChoice | null
+  /** Poistettu osio odottamassa ratkaisuaan, tai null. */
+  removal: RemovalState | null
+  /** Ratkaisematta oleva kysymys, tai null. */
+  choice: EditChoice | null
   /** Kysymyksen vaihtoehdot haamuina kartalla. */
   ghosts: Ghost[] | null
   /** Miksi haaraa ei saatu rataan, tai null. */
@@ -48,6 +50,10 @@ interface GeneratePageProps {
   onTapPiece: (index: number | null) => void
   onTapGhost: (index: number) => void
   onCancelChoice: () => void
+  onSolve: () => void
+  onRemove: () => void
+  onFillGap: () => void
+  onUndoRemove: () => void
   onHandleMove: (handle: HandleId, point: Point) => void
   onSeedChange: (seed: string) => void
   onRegenerate: () => void
@@ -57,8 +63,8 @@ interface GeneratePageProps {
 /**
  * Sivu 3: generointi, piirto ja muokkaus samassa näkymässä (R2). Kartta on
  * sankari, ja epäselvyydet kerrotaan kartan alla olevalla statusrivillä — ei
- * dialogeina. Toimintorivi vaihtuu sen mukaan onko osio valittuna vai onko
- * haarakysymys auki.
+ * dialogeina. Toimintorivi vaihtuu sen mukaan onko osio valittuna, onko aukko
+ * auki vai odottaako kysymys vastausta.
  */
 export function GeneratePage({
   area,
@@ -71,6 +77,7 @@ export function GeneratePage({
   guide,
   edited,
   section,
+  removal,
   choice,
   ghosts,
   extendFailure,
@@ -79,6 +86,10 @@ export function GeneratePage({
   onTapPiece,
   onTapGhost,
   onCancelChoice,
+  onSolve,
+  onRemove,
+  onFillGap,
+  onUndoRemove,
   onHandleMove,
   onSeedChange,
   onRegenerate,
@@ -91,14 +102,19 @@ export function GeneratePage({
     <div class="page map-page">
       <TrackMap
         area={area}
-        track={track}
+        // Poistettu osio näkyy kartalla aukkona, mutta muokattava rata on yhä
+        // alkuperäinen: aukko on kysymys, ei tila johon rata jää.
+        track={removal?.preview ?? track}
         library={library}
         mode={drawMode ? 'draw' : 'view'}
         guide={guide}
-        selection={section?.section.indices ?? null}
-        handles={section?.handles ?? null}
+        selection={removal ? null : section?.section.indices ?? null}
+        // Kahvat pois heti kun kartalla on kysymys: niiden osuma-alue on
+        // sormen kokoinen ja se peittäisi juuri ne haamut, joita napautetaan.
+        handles={removal || choice ? null : section?.handles ?? null}
         ghosts={ghosts}
-        badge={badgeFor(section, track)}
+        gap={removal?.gap ?? null}
+        badge={badgeFor(section, removal, track)}
         onDraw={onDraw}
         onTapPiece={onTapPiece}
         onTapGhost={onTapGhost}
@@ -113,12 +129,13 @@ export function GeneratePage({
           result={result}
           drawMode={drawMode}
           section={section}
+          removal={removal}
           choice={choice}
           extendFailure={extendFailure}
         />
       </div>
 
-      {section || choice ? null : (
+      {section || choice || removal ? null : (
         <div class="seed-row">
           <label class="seed-label" for="seed-input">
             {t('generate.seed')}
@@ -143,14 +160,34 @@ export function GeneratePage({
           </button>
           {choice.options.map((option, index) => (
             <button key={index} type="button" class="action primary" onClick={() => onTapGhost(index)}>
-              {index + 1}. {describeBranchOption(option)}
+              {index + 1}. {option.label}
             </button>
           ))}
         </ActionBar>
+      ) : removal ? (
+        <ActionBar>
+          <button type="button" class="action" onClick={onUndoRemove}>
+            {t('gap.undo')}
+          </button>
+          <button type="button" class="action primary" onClick={onFillGap}>
+            {t('gap.fill')}
+          </button>
+          <button
+            type="button"
+            class={drawMode ? 'action primary active' : 'action primary'}
+            aria-pressed={drawMode}
+            onClick={() => onDrawModeChange(!drawMode)}
+          >
+            {drawMode ? t('draw.cancel') : t('section.draw')}
+          </button>
+        </ActionBar>
       ) : section ? (
         <ActionBar>
-          <button type="button" class="action" onClick={() => onTapPiece(null)}>
-            {t('section.clear')}
+          <button type="button" class="action narrow" aria-label={t('section.clear')} onClick={() => onTapPiece(null)}>
+            ✕
+          </button>
+          <button type="button" class="action primary" disabled={!section.section.replaceable} onClick={onSolve}>
+            {t('section.options')}
           </button>
           <button
             type="button"
@@ -160,6 +197,9 @@ export function GeneratePage({
             onClick={() => onDrawModeChange(!drawMode)}
           >
             {drawMode ? t('draw.cancel') : t('section.draw')}
+          </button>
+          <button type="button" class="action" disabled={!section.section.replaceable} onClick={onRemove}>
+            {t('section.remove')}
           </button>
         </ActionBar>
       ) : (
@@ -189,7 +229,8 @@ export function GeneratePage({
  * "mikä pala tämä on" on juuri se mitä yhtä palaa napautettaessa kysytään.
  * Pidemmän osion mitat kertoo statusrivi, eikä samaa toisteta kartan päällä.
  */
-function badgeFor(section: SectionState | null, track: Track | null): string | null {
+function badgeFor(section: SectionState | null, removal: RemovalState | null, track: Track | null): string | null {
+  if (removal) return null
   if (!section || !track || section.section.indices.length !== 1) return null
   return track.pieces[section.section.indices[0]]?.pieceId ?? null
 }
@@ -200,14 +241,26 @@ interface StatusProps {
   drawing: DrawingState | null
   edited: EditState | null
   section: SectionState | null
-  choice: BranchChoice | null
+  removal: RemovalState | null
+  choice: EditChoice | null
   extendFailure: ExtendReason | null
   result: GenerateResult | null
 }
 
 /** Statusrivi kertoo aina mitä kartalla näkyy ja miksi — myös kun mikään ei onnistunut. */
-function Status({ busy, drawMode, drawing, edited, section, choice, extendFailure, result }: StatusProps) {
-  if (choice) return <span>{t('branch.choose')}</span>
+function Status({ busy, drawMode, drawing, edited, section, removal, choice, extendFailure, result }: StatusProps) {
+  // Haaraa kysytään piirron jälkeen, muut vaihtoehdot autosolverilta: sama
+  // haamukuvio, mutta käyttäjä on kysynyt kahta eri asiaa.
+  if (choice) return <span>{t(choice.options[0]?.kind === 'branch' ? 'branch.choose' : 'edit.choose')}</span>
+  if (removal) {
+    if (drawMode) return <span>{t('section.drawHint')}</span>
+    return (
+      <span>
+        {t('gap.open', { length: formatCm(removal.gap.lengthMm) })}{' '}
+        <span class="muted">{t('section.freed', { pieces: describePieces(removal.gap.freed) })}</span>
+      </span>
+    )
+  }
   if (section) {
     if (drawMode) return <span>{t('section.drawHint')}</span>
     return <SectionStatus section={section} />
@@ -217,18 +270,7 @@ function Status({ busy, drawMode, drawing, edited, section, choice, extendFailur
   if (extendFailure) return <span class="warning">{describeExtendFailure(extendFailure)}</span>
 
   if (edited) {
-    const summary =
-      edited.kind === 'branch'
-        ? t('branch.added', {
-            pieces: formatNumber(edited.pieceCount),
-            length: formatMetres(edited.track.lengthMm),
-            change: describeChange(edited),
-          })
-        : t('section.replaced', {
-            pieces: formatNumber(edited.pieceCount),
-            length: formatMetres(edited.track.lengthMm),
-            deviation: formatNumber(Math.round(edited.deviationMm)),
-          })
+    const summary = describeEdit(edited)
     if (edited.withinInventory) return <span>{summary}</span>
     return (
       <span>
@@ -268,8 +310,36 @@ function Status({ busy, drawMode, drawing, edited, section, choice, extendFailur
 }
 
 /**
+ * Mitä viimeksi tehtiin. Piirretty korvaus kertoo poikkeamansa piirretystä
+ * viivasta; valmis ehdotus taas kertoo mikä se oli ja mitä se maksaa paloina —
+ * poikkeamaa ei ole, koska mitään ei piirretty.
+ */
+function describeEdit(edited: EditState): string {
+  if (edited.kind === 'replace') {
+    return t('section.replaced', {
+      pieces: formatNumber(edited.pieceCount),
+      length: formatMetres(edited.track.lengthMm),
+      deviation: formatNumber(Math.round(edited.deviationMm)),
+    })
+  }
+  if (edited.kind === 'branch') {
+    return t('branch.added', {
+      pieces: formatNumber(edited.pieceCount),
+      length: formatMetres(edited.track.lengthMm),
+      change: describeChange(edited),
+    })
+  }
+  return t('edit.applied', {
+    what: edited.label ?? '',
+    pieces: formatNumber(edited.pieceCount),
+    length: formatMetres(edited.track.lengthMm),
+    change: describeChange(edited),
+  })
+}
+
+/**
  * Osuuden tehtävänanto käyttäjälle (README luku 6): "82 cm, sivutilaa 25 cm
- * vasemmalla". Epäonnistuneen korvauksen syy näkyy saman rivin jatkona, jotta
+ * vasemmalla". Epäonnistuneen yrityksen syy näkyy saman rivin jatkona, jotta
  * kartta pysyy sankarina eikä dialogeja tarvita.
  */
 function SectionStatus({ section }: { section: SectionState }) {
@@ -281,8 +351,8 @@ function SectionStatus({ section }: { section: SectionState }) {
     right: formatCm(brief.rightMm),
   })
 
-  const note = section.failure
-    ? describeReplaceFailure(section.failure)
+  const note = section.note
+    ? describeSectionNote(section.note)
     : !section.section.replaceable
       ? t('section.notReplaceable')
       : null
@@ -303,8 +373,8 @@ function SectionStatus({ section }: { section: SectionState }) {
 
 /** Palamuutoskortti (README luku 6): "käyttää 1×L · vapauttaa 1×D". */
 function describeChange(edited: EditState): string {
-  if (!edited.branch) return ''
-  const { added, removed } = edited.branch
+  if (!edited.change) return ''
+  const { added, removed } = edited.change
   if (Object.keys(removed).length === 0) return t('branch.uses', { added: describePieces(added) })
   return t('branch.change', { added: describePieces(added), removed: describePieces(removed) })
 }

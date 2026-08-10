@@ -312,7 +312,7 @@ export function bridgeOver(
     }
     if (range.minMm > range.maxMm) continue
 
-    const inserted = insertIntoRun(chainTrack, library, table, inventory, run, core, targetAlongMm, range)
+    const inserted = insertIntoRun(chainTrack, library, table, inventory, run, core, targetAlongMm, { range })
     if (!inserted) continue
 
     return {

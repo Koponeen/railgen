@@ -1,13 +1,14 @@
-import { createInventory, shortagesAgainst, unlimitedInventory, type Inventory } from '../core/inventory'
+import { createInventory, unlimitedInventory, type Inventory } from '../core/inventory'
 import { defaultLibrary, type PieceLibrary } from '../core/library'
 import type { PlacedPiece } from '../core/pieces'
 import type { Vec } from '../core/vec'
-import { evaluateClosure, type ClosureReport, type FlexSettings, type Joint, type VarioSettings } from '../core/vario'
+import type { FlexSettings, VarioSettings } from '../core/vario'
 import { beamFit, type BeamFit, type FitTuning } from '../fit/beam'
 import { cleanDrawing, polylineLength, type CleanOptions } from '../fit/simplify'
 import { buildTarget } from '../fit/target'
-import { summariseTrack, type Track } from '../gen/build'
+import type { Track } from '../gen/build'
 import { areaBounds, buildMask, type AreaShape } from '../gen/mask'
+import { assembleTrack, type AssembleReason } from './assemble'
 import type { Section, TrackChain } from './section'
 
 // Osion korvaus piirtämällä (README luku 6, toteutusjärjestys kohta 3). Sama
@@ -20,14 +21,7 @@ import type { Section, TrackChain } from './section'
 // Siksi epäonnistuminen on aito viesti käyttäjälle eikä algoritmin puute:
 // piirretty muoto ei mahdu näihin päätyportteihin.
 
-export type ReplaceReason =
-  | 'ok'
-  | 'section-not-replaceable'
-  | 'drawing-too-short'
-  | 'no-fit'
-  | 'ends-beyond-budget'
-  | 'joint-over-safety-cap'
-  | 'self-collision'
+export type ReplaceReason = AssembleReason | 'section-not-replaceable' | 'drawing-too-short' | 'no-fit'
 
 export interface ReplaceOptions {
   area: AreaShape
@@ -211,36 +205,18 @@ function assemble(
 
   const spliced = splice(track, section, pieces)
 
-  // Päätyheitto kuuluu osion omille liitoksille, ei koko radalle: se on
-  // syntynyt tässä ja sen on mahduttava tähän. Suuntaheittoa ei ole, koska
-  // keilahaku hyväksyi vain oikeaan lokeroon osuvat ketjut.
-  const local = evaluateClosure(jointsOf(spliced.pieces, spliced.localJoints, library), { gapMm, angleDeg: 0 }, {
-    settings: options.vario,
-    flex: options.flex,
-  })
-  if (!local.withinBudget) return { result: failure('ends-beyond-budget'), gapMm }
-  if (!local.withinCaps) return { result: failure('joint-over-safety-cap'), gapMm }
-
-  const usage = countUsage(spliced.pieces)
-  const next = summariseTrack(
-    {
-      pieces: spliced.pieces,
-      joints: spliced.joints,
-      closure: combinedClosure(track, spliced, gapMm, library, options),
-      usage,
-      shortages: shortagesAgainst(usage, inventory),
-      areaBounds: bounds,
-    },
-    library,
+  // Päätyheitto kuuluu osion omille liitoksille, ei koko radalle. Suuntaheittoa
+  // ei ole, koska keilahaku hyväksyi vain oikeaan lokeroon osuvat ketjut.
+  const assembled = assembleTrack(
+    track,
+    { pieces: spliced.pieces, joints: spliced.joints, localJoints: spliced.localJoints, gapMm },
+    { library, inventory, vario: options.vario, flex: options.flex, bounds },
   )
-
-  // Korvaus ei saa tuoda uutta törmäystä. Vertailu alkuperäiseen eikä nollaan,
-  // koska monitasoisessa radassa laskuri voi olla valmiiksi nollaa suurempi.
-  if (next.collisions > track.collisions) return { result: failure('self-collision'), gapMm }
+  if (!assembled.track) return { result: failure(assembled.reason), gapMm }
 
   return {
     result: {
-      track: next,
+      track: assembled.track,
       reason: 'ok',
       pieceCount: pieces.length,
       deviation: fit.deviation,
@@ -269,7 +245,7 @@ export function relaxSection(pieces: PlacedPiece[], gap: Vec): void {
   }
 }
 
-interface Spliced {
+export interface Spliced {
   pieces: PlacedPiece[]
   joints: [number, number][]
   /** Osion tilalle tulleiden palojen liitokset, päätyliitokset mukaan lukien. */
@@ -277,10 +253,30 @@ interface Spliced {
 }
 
 /**
+ * Korvausketjun oma rakenne. Piirretty ketju on peräkkäinen jono, mutta
+ * autosolverin variaatiossa on sivuraiteita ja ohituskaiteen umpisilmukka —
+ * silloin liitokset eivät ole `i -> i+1` eikä ketjun viimeinen pala ole
+ * taulukon viimeinen (sivuraiteen puskuri on).
+ */
+export interface SpliceLayout {
+  /** Korvauksen omat liitokset `replacement`-indekseinä. Oletus: peräkkäinen ketju. */
+  edges?: readonly [number, number][]
+  /** Mihin korvauksen palaan osiota edeltävä pala liittyy. Oletus: ensimmäinen. */
+  entry?: number
+  /** Mihin korvauksen palaan osion jälkeinen pala liittyy. Oletus: viimeinen. */
+  exit?: number
+}
+
+/**
  * Vaihtaa osion palat uusiin ja rakentaa liitoslistan uudelleen. Muut palat
  * säilyttävät keskinäisen järjestyksensä, uudet tulevat listan loppuun.
  */
-export function splice(track: TrackChain, section: Section, replacement: readonly PlacedPiece[]): Spliced {
+export function splice(
+  track: TrackChain,
+  section: Section,
+  replacement: readonly PlacedPiece[],
+  layout: SpliceLayout = {},
+): Spliced {
   const inside = new Set(section.indices)
   const remap = new Map<number, number>()
   const pieces: PlacedPiece[] = []
@@ -292,7 +288,6 @@ export function splice(track: TrackChain, section: Section, replacement: readonl
   })
 
   const first = pieces.length
-  const last = first + replacement.length - 1
   pieces.push(...replacement)
 
   const joints: [number, number][] = []
@@ -302,41 +297,17 @@ export function splice(track: TrackChain, section: Section, replacement: readonl
   }
 
   const localJoints: [number, number][] = []
-  for (let i = first; i < last; i += 1) localJoints.push([i, i + 1])
-  if (section.before !== null) localJoints.push([remap.get(section.before) as number, first])
-  if (section.after !== null) localJoints.push([remap.get(section.after) as number, last])
+  if (layout.edges) {
+    for (const [a, b] of layout.edges) localJoints.push([first + a, first + b])
+  } else {
+    for (let i = first; i < first + replacement.length - 1; i += 1) localJoints.push([i, i + 1])
+  }
+  if (replacement.length > 0) {
+    const entry = first + (layout.entry ?? 0)
+    const exit = first + (layout.exit ?? replacement.length - 1)
+    if (section.before !== null) localJoints.push([remap.get(section.before) as number, entry])
+    if (section.after !== null) localJoints.push([remap.get(section.after) as number, exit])
+  }
 
   return { pieces, joints: [...joints, ...localJoints], localJoints }
-}
-
-/** Liitosten joustokertoimet: liitos joustaa kahden palansa keskiarvon verran. */
-export function jointsOf(pieces: readonly PlacedPiece[], joints: readonly [number, number][], library: PieceLibrary): Joint[] {
-  return joints.map(([a, b]) => ({
-    varioFactor: (library.get(pieces[a].pieceId).varioFactor + library.get(pieces[b].pieceId).varioFactor) / 2,
-  }))
-}
-
-/**
- * Koko radan sulkeutumisraportti korvauksen jälkeen. Silmukan alkuperäinen
- * sauma on yhä olemassa ja kuluttaa oman osuutensa Variosta, ja korvaus lisää
- * siihen oman päätyheittonsa — kireysprosentti kertoo yhteissumman.
- */
-function combinedClosure(
-  track: Track,
-  spliced: Spliced,
-  gapMm: number,
-  library: PieceLibrary,
-  options: ReplaceOptions,
-): ClosureReport {
-  return evaluateClosure(
-    jointsOf(spliced.pieces, spliced.joints, library),
-    { gapMm: track.closure.error.gapMm + gapMm, angleDeg: track.closure.error.angleDeg },
-    { settings: options.vario, flex: options.flex },
-  )
-}
-
-function countUsage(pieces: readonly PlacedPiece[]): Record<string, number> {
-  const usage: Record<string, number> = {}
-  for (const placed of pieces) usage[placed.pieceId] = (usage[placed.pieceId] ?? 0) + 1
-  return usage
 }

@@ -1,4 +1,4 @@
-import type { Ledger } from './inventory'
+import type { Inventory, Ledger } from './inventory'
 import type { PieceLibrary } from './library'
 import type { ResolvedPiece } from './pieces'
 import type { Rng } from './rng'
@@ -62,6 +62,17 @@ function compareCombos(a: readonly number[], b: readonly number[]): number {
 export function fillTableFor(library: PieceLibrary, maxUnits?: number): FillTable {
   return buildFillTable(
     library.fillerStraights().map((piece) => piece.straightLengthMm as number),
+    maxUnits,
+  )
+}
+
+/** Sama taulukko kokoelman rajoissa: palaa jota ei ole ei kannata etsiä. */
+export function inventoryFillTable(library: PieceLibrary, inventory: Inventory, maxUnits?: number): FillTable {
+  return buildFillTable(
+    library
+      .fillerStraights()
+      .filter((piece) => inventory.unlimited || (inventory.counts[piece.id] ?? 0) > 0)
+      .map((piece) => piece.straightLengthMm as number),
     maxUnits,
   )
 }

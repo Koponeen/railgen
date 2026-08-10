@@ -176,7 +176,8 @@ näytölle menee netto.
 ## Mikä jäi seuraavaan vaiheeseen
 
 Haaran päähän ei aseteta puskuria automaattisesti: "sivuraide puskurilla" on
-autosolverin variaatiokuvio (README luku 6) ja kuuluu vaiheeseen 5. Samoin
-haaran poisto ja vaihto: tässä vaiheessa haaran saa vain lisätä, ja paluu käy
-generoimalla uudelleen — generoitu, piirretty ja muokattu rata elävät rinnakkain
-kuten ennenkin.
+autosolverin variaatiokuvio (README luku 6), ja se tuli vaiheessa 5
+(`docs/VARIATIONS.md`). Sama koskee haaran poistoa ja palan vaihtoa: piirretyn
+haaran saa nyt myös purkaa valitsemalla sen osioksi. Paluu käy yhä myös
+generoimalla uudelleen — generoitu, piirretty ja muokattu rata elävät
+rinnakkain kuten ennenkin.

@@ -3,7 +3,8 @@
 Toteuttaa README luvun 6 siltä osin kuin toteutusjärjestyksen kohta 3 vaatii:
 **luonnollisen jakson valinta, liukuvat päätykahvat, sovitus kiinnitetyillä
 päätyporteilla ja purkautuvien palojen palautuminen inventaarioon.**
-"Vaihtoehdot" (autosolver) ja "Poista" ovat vaihetta 5 eivätkä kuulu tähän.
+"Vaihtoehdot" (autosolver) ja "Poista" käyttävät samaa valintaa ja samaa
+tehtävänantoa; ne on kuvattu erikseen `docs/VARIATIONS.md`:ssä.
 
 ```
 napautus -> luonnollinen jakso -> päätykahvat -> veto -> sovitus päästä päähän -> uusi rata
@@ -135,10 +136,12 @@ suoraan.
 ## Käyttöliittymä
 
 Napautus valitsee osion ja kartta zoomaa siihen; napautus tyhjään palauttaa
-kokonäkymän. Toimintorivi vaihtuu osiotilaan: **Poista valinta** ja **Piirrä
-tilalle**. Piirtotila on sama eksplisiittinen ja lyhytikäinen tila kuin
-vapaassa piirrossa — yksi veto, ja kaksi sormea peruu ja navigoi. Kahvan päältä
-alkava veto on aina osion venytystä, ei kartan siirtoa.
+kokonäkymän. Toimintorivi vaihtuu osiotilaan: valinnan sulkeva nappi ja README
+luvun 6 kolme toimintoa **Vaihtoehdot / Piirrä tilalle / Poista**, jotka kaikki
+saavat saman tehtävänannon (`docs/VARIATIONS.md`). Piirtotila on sama
+eksplisiittinen ja lyhytikäinen tila kuin vapaassa piirrossa — yksi veto, ja
+kaksi sormea peruu ja navigoi. Kahvan päältä alkava veto on aina osion
+venytystä, ei kartan siirtoa.
 
 Onnistunut korvaus purkaa valinnan (indeksit viittaisivat vanhaan rataan) ja
 jättää muokatun radan näkyviin. Ilman valintaa radan vierestä alkava veto ei ole

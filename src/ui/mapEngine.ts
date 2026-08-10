@@ -7,6 +7,7 @@ import {
   createInitialState,
   makeLineId,
   type AppState,
+  type GapMark,
   type HandleId,
   type Mode,
   type Ghost,
@@ -40,6 +41,8 @@ export interface MapEngineContent {
   handles?: SectionHandles | null
   /** Valittavat vaihtoehdot haamuina radan päällä. */
   ghosts?: readonly Ghost[] | null
+  /** Poistetun osion jättämä aukko, tai null. */
+  gap?: GapMark | null
   /** Kartta käännetty neljänneskierroksen ruudulle sopimaan. */
   rotated?: boolean
 }
@@ -186,6 +189,7 @@ export function mountMapEngine(
       state.selection = next.selection ?? null
       state.handles = next.handles ?? null
       state.ghosts = next.ghosts ?? []
+      state.gap = next.gap ?? null
       state.rotated = next.rotated ?? false
       setGuide(next.guide)
       if (moved) state.view = fitView()

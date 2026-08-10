@@ -237,9 +237,15 @@ Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
 - **Vaihe 3** (osion korvaus): `src/edit/` — luonnollisen jakson valinta, liukuvat
   päätykahvat, osuuden tehtävänanto ja sovitus kiinnitetyillä päätyporteilla; purettava
   osio vapauttaa palansa takaisin inventaarioon. Ks. `docs/EDITING.md`.
+- **Vaihe 4** (lisäävä piirto): haarakohdan päättely suoralta ja kaaren tilalle,
+  risteämän X/silta-valinta ja haamuesikatselut kartalla. Ks. `docs/BRANCHING.md`.
+- **Vaihe 5** (vaihda/poista/autosolver): porttisignatuurilistat palan vaihtoon,
+  poiston aukkomerkki Solver-täyttöineen ja variaatiokuviokirjasto datana
+  (`data/variations/`) — sivuraide, ohituskaide, S-kiemura, pullistuma, mäki, viisto
+  venytys ja risteys + haara. Ks. `docs/VARIATIONS.md`.
 
-Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2 ja 3 tuovat piirron
-ja muokkauksen sen päälle. Lisäävä piirto ja autosolver tulevat vaiheissa 4–5.
+Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2–5 tuovat piirron,
+muokkauksen ja autosolverin sen päälle.
 
 Palakirjasto kattaa suorat sukupuolivariantteineen, kaaret, rampit, sillan kannet,
 vaihteet, T- ja tähtiristeykset, ristit ja puskurit. Loput odottavat lähdetietoa;
@@ -258,5 +264,6 @@ npm run deploy         # build + wrangler deploy (Cloudflare Workers static asse
 Testaa eleet oikealla puhelimella (tai selaimen laitesimulaattorilla): kahden sormen
 nipistys/veto zoomaa/panoroi aina, yksi sormi panoroi/valitsee katselutilassa, "Piirrä"-nappi
 avaa lyhytikäisen piirtotilan yhdeksi vedoksi kerrallaan. Napautus rataan valitsee osion,
-jonka päätykahvoja voi vetää ja jonka tilalle voi piirtää uuden muodon. Kartta on
+jonka päätykahvoja voi vetää ja jonka tilalle voi joko piirtää uuden muodon, pyytää
+valmiita vaihtoehtoja tai jonka voi poistaa ja täyttää uudelleen. Kartta on
 imperatiivinen saareke (`src/ui/mapEngine.ts`) Preact-kromin (`src/ui/App.tsx`) ympärillä.

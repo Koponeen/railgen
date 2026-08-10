@@ -458,6 +458,14 @@ body {
   color: var(--text);
 }
 
+/* Valinnan sulkeva nappi ei kilpaile leveydestä kolmen varsinaisen toiminnon
+   kanssa (README luku 6: Vaihtoehdot / Piirrä tilalle / Poista), mutta pysyy
+   silti sormimitassa. */
+.action.narrow {
+  flex: 0 0 var(--tap);
+  font-size: 18px;
+}
+
 .action.primary {
   background: var(--accent);
   border-color: var(--accent);

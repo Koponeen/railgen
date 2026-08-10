@@ -1,0 +1,212 @@
+[
+  {
+    "id": "siding-right",
+    "kind": "siding",
+    "steps": [
+      {
+        "piece": "L",
+        "branch": { "portId": "branch", "steps": [{ "fill": { "minMm": 108, "maxMm": 432 } }, { "piece": "R" }] }
+      }
+    ],
+    "tags": ["switch"],
+    "notes": "Sivuraide puskurilla (README luku 6): vaihde + pätkä + puskuri. Vaihteen pääreitti on A:n mittainen, joten osuuden geometria ei muutu lainkaan; sivuraiteen pituus valitaan sen mukaan paljonko sivutilaa on."
+  },
+  {
+    "id": "siding-left",
+    "kind": "siding",
+    "steps": [
+      {
+        "piece": "M",
+        "branch": { "portId": "branch", "steps": [{ "fill": { "minMm": 108, "maxMm": 432 } }, { "piece": "R" }] }
+      }
+    ],
+    "tags": ["switch"]
+  },
+  {
+    "id": "siding-right-tight",
+    "kind": "siding",
+    "steps": [
+      {
+        "piece": "O1",
+        "branch": { "portId": "branch", "steps": [{ "fill": { "minMm": 54, "maxMm": 288 } }, { "piece": "R" }] }
+      }
+    ],
+    "tags": ["switch", "tight"],
+    "notes": "Ahtaan paikan sivuraide: O1:n pääreitti on A1:n mittainen ja haara kaartaa pienellä säteellä."
+  },
+  {
+    "id": "siding-left-tight",
+    "kind": "siding",
+    "steps": [
+      {
+        "piece": "P1",
+        "branch": { "portId": "branch", "steps": [{ "fill": { "minMm": 54, "maxMm": 288 } }, { "piece": "R" }] }
+      }
+    ],
+    "tags": ["switch", "tight"]
+  },
+  {
+    "id": "passing-loop-right",
+    "kind": "passing-loop",
+    "steps": [
+      { "piece": "L" },
+      { "fill": { "minMm": 252, "maxMm": 468 } },
+      { "piece": "J", "reverse": true }
+    ],
+    "link": {
+      "from": { "step": 0, "portId": "branch" },
+      "to": { "step": 2, "portId": "branchLeft" },
+      "steps": [
+        { "piece": "E", "mirror": true },
+        { "fill": { "minMm": 0, "maxMm": 216 } },
+        { "piece": "E", "mirror": true }
+      ]
+    },
+    "tags": ["switch", "loop"],
+    "notes": "Ohituskaide (README luku 6): L - rinnakkaissuora - J. Jälkimmäinen vaihde kuljetaan takaperin, ja juuri siksi se on J eikä M: J on I liitinsukupuolet päinvastoin, joten sen kauempi pää ottaa vastaan tapin ja sen haaraportti kolon. Silmukka ei sulkeudu eksaktisti (45 asteen kaaret vaihteiden välissä), vaan muutaman millin jäännös jää Varion nieltäväksi — sama syy kuin H2:n kohdalla."
+  },
+  {
+    "id": "passing-loop-left",
+    "kind": "passing-loop",
+    "steps": [
+      { "piece": "M" },
+      { "fill": { "minMm": 252, "maxMm": 468 } },
+      { "piece": "J", "reverse": true }
+    ],
+    "link": {
+      "from": { "step": 0, "portId": "branch" },
+      "to": { "step": 2, "portId": "branchRight" },
+      "steps": [{ "piece": "E" }, { "fill": { "minMm": 0, "maxMm": 216 } }, { "piece": "E" }]
+    },
+    "tags": ["switch", "loop"]
+  },
+  {
+    "id": "s-bend",
+    "kind": "s-bend",
+    "steps": [
+      { "piece": "E1" },
+      { "piece": "E1", "mirror": true },
+      { "piece": "E1", "mirror": true },
+      { "piece": "E1" },
+      { "piece": "E1", "mirror": true },
+      { "piece": "E1" },
+      { "piece": "E1" },
+      { "piece": "E1", "mirror": true }
+    ],
+    "tags": ["curve"],
+    "notes": "S-kiemura (README luku 6): pelkkiä kaaria, pullistuma ensin oikealle ja sitten vasemmalle. Vaatii sivutilaa molemmin puolin. Etenemä 622 mm ei osu 18 mm:n gridiin, joten täyttö napsautetaan lähimpään ja jäännös jää Variolle."
+  },
+  {
+    "id": "bulge-right",
+    "kind": "bulge",
+    "steps": [{ "piece": "E" }, { "piece": "E", "mirror": true }, { "piece": "E", "mirror": true }, { "piece": "E" }],
+    "tags": ["curve"],
+    "notes": "Pullistuma: puolikaari ulos ja takaisin samalle linjalle. Isolla säteellä etenemä 571 mm ja sivusiirtymä 118 mm."
+  },
+  {
+    "id": "bulge-left",
+    "kind": "bulge",
+    "steps": [{ "piece": "E", "mirror": true }, { "piece": "E" }, { "piece": "E" }, { "piece": "E", "mirror": true }],
+    "tags": ["curve"]
+  },
+  {
+    "id": "bulge-right-tight",
+    "kind": "bulge",
+    "steps": [
+      { "piece": "E1" },
+      { "piece": "E1", "mirror": true },
+      { "piece": "E1", "mirror": true },
+      { "piece": "E1" }
+    ],
+    "tags": ["curve", "tight"],
+    "notes": "Ahtaan paikan pullistuma: etenemä 311 mm ja sivusiirtymä 64 mm."
+  },
+  {
+    "id": "bulge-left-tight",
+    "kind": "bulge",
+    "steps": [
+      { "piece": "E1", "mirror": true },
+      { "piece": "E1" },
+      { "piece": "E1" },
+      { "piece": "E1", "mirror": true }
+    ],
+    "tags": ["curve", "tight"]
+  },
+  {
+    "id": "hill",
+    "kind": "hill",
+    "steps": [
+      { "piece": "N" },
+      { "piece": "DECK216" },
+      { "piece": "C2" },
+      { "piece": "N", "reverse": true },
+      { "piece": "B2" }
+    ],
+    "tags": ["level"],
+    "notes": "Mäki (README luku 6): ramppi ylös, kansi, ramppi alas; 756 mm eikä sivutilaa. Laskeva ramppi kuljetaan yläpäästä sisään, mikä kääntää liittimen sukupuolen — C2 ottaa käännöksen vastaan ja B2 palauttaa parillisuuden. Sama ratkaisu kuin elementtikirjaston hill-d:ssä."
+  },
+  {
+    "id": "hill-short",
+    "kind": "hill",
+    "steps": [
+      { "piece": "N" },
+      { "piece": "DECK144" },
+      { "piece": "C2" },
+      { "piece": "N", "reverse": true },
+      { "piece": "B2" }
+    ],
+    "tags": ["level"],
+    "notes": "Lyhyempi mäki, 684 mm."
+  },
+  {
+    "id": "skew-right",
+    "kind": "skew",
+    "steps": [
+      { "piece": "E" },
+      { "fill": { "minMm": 54, "maxMm": 216 } },
+      { "piece": "E", "mirror": true },
+      { "piece": "E", "mirror": true },
+      { "fill": { "minMm": 54, "maxMm": 216 } },
+      { "piece": "E" }
+    ],
+    "tags": ["curve"],
+    "notes": "Viisto venytys (README luku 6): kaari–viistosuora–kaari, ulos ja takaisin. Viistosuorien pituudet arvotaan erikseen, ja vain yhtä pitkät parit päätyvät takaisin samalle linjalle — geometria karsii loput itse."
+  },
+  {
+    "id": "skew-left",
+    "kind": "skew",
+    "steps": [
+      { "piece": "E", "mirror": true },
+      { "fill": { "minMm": 54, "maxMm": 216 } },
+      { "piece": "E" },
+      { "piece": "E" },
+      { "fill": { "minMm": 54, "maxMm": 216 } },
+      { "piece": "E", "mirror": true }
+    ],
+    "tags": ["curve"]
+  },
+  {
+    "id": "tee-branch",
+    "kind": "junction",
+    "steps": [
+      {
+        "piece": "T",
+        "branch": { "portId": "branch", "steps": [{ "fill": { "minMm": 108, "maxMm": 432 } }, { "piece": "R" }] }
+      }
+    ],
+    "tags": ["crossing"],
+    "notes": "T-risteys + haara (README luku 6): läpimenevä reitti on D:n mittainen, haara lähtee suorassa kulmassa."
+  },
+  {
+    "id": "star-branch",
+    "kind": "junction",
+    "steps": [
+      {
+        "piece": "X",
+        "branch": { "portId": "south", "steps": [{ "fill": { "minMm": 108, "maxMm": 432 } }, { "piece": "R" }] }
+      }
+    ],
+    "tags": ["crossing"],
+    "notes": "Tähtiristeys + haara: X täyttää yhden loogisen solun ja jättää pohjoisen portin auki myöhempää haaraa varten. Vain etelän portti ottaa vastaan tavallisen ketjun (pohjoinen on kolo)."
+  }
+]

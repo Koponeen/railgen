@@ -38,7 +38,8 @@ Nämä käytiin läpi ennen toteutusta, jotta niitä ei ratkota lennossa keskell
 ```
 data/
   pieces/          # palakirjasto (JSON, ei koodia)
-  solver-table.json# Track Solver -täyttötaulukko
+  elements/        # elementtikirjasto (makropalat)
+  variations/      # autosolverin variaatiokuviot
 locales/
   fi.json          # oletuskieli
   en.json
@@ -53,6 +54,7 @@ src/
 docs/
   IMPLEMENTATION_PLAN.md
   PIECE_LIBRARY.md GENERATION.md UI.md DRAWING.md EDITING.md BRANCHING.md
+  VARIATIONS.md
 ```
 
 ### UI-linjaukset (sitovat)
@@ -131,6 +133,7 @@ README §10 kohta 0: "jos tämä ei tunnu hyvältä, mikään ei pelasta."
 
 - Porttisignatuurilistat ("vaihda toiseen"), poiston aukkomerkki, autosolverin 7 variaatiokuviota parametrisena datana, palamuutoskortit.
 - **Commit**: `Add swap, delete and autosolver variations`
+- **Toteutettu**: kuviot ovat dataa (`data/variations/`) ja niiden vaatimukset mitataan geometriasta, ei kirjoiteta dataan. Kaikki muokkaukset kokoavat radan samasta paikasta (`assemble.ts`), ja upotus-ja-täytä -koneisto on yhteinen vaihteen, risteyksen, sillan ja kuvion kesken. Ks. `docs/VARIATIONS.md`.
 
 Jokainen vaihe on itsenäisesti julkaistava, ja rata on joka välivaiheessa ehjä — epäonnistunut mutaatio tai sovitus ei koskaan jätä rikkinäistä tilaa näkyviin.
 

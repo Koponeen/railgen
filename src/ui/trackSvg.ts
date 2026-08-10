@@ -5,7 +5,7 @@ import { placedSegments, type PlacedPiece } from '../core/pieces'
 import { GROOVE_SPACING_MM } from '../core/units'
 import type { Track } from '../gen/build'
 import { areaOutline, type AreaShape } from '../gen/mask'
-import type { Ghost } from './state'
+import type { GapMark, Ghost } from './state'
 
 // Rata piirretään geometriadatasta, ei kuva-asseteista (CLAUDE.md). Lauta on
 // keskilinja levitettynä 40 mm:iin ja urat sen rinnakkaissiirtoja, joten
@@ -135,6 +135,34 @@ function buildGhostTag(ghost: Ghost, rotated: boolean): SVGGElement {
   text.textContent = String(ghost.index + 1)
   tag.appendChild(text)
   return tag
+}
+
+/**
+ * Aukkomerkki: katkoviiva poistetun osion päätyporttien välissä. Merkki ei ole
+ * rata vaan kysymys, joten se piirretään radan tyyleistä erilleen.
+ */
+export function buildGapMark(gap: GapMark): SVGGElement {
+  const group = document.createElementNS(SVG_NS, 'g')
+  group.setAttribute('class', 'gap-mark')
+
+  const line = document.createElementNS(SVG_NS, 'line')
+  line.setAttribute('x1', gap.start.x.toFixed(1))
+  line.setAttribute('y1', gap.start.y.toFixed(1))
+  line.setAttribute('x2', gap.end.x.toFixed(1))
+  line.setAttribute('y2', gap.end.y.toFixed(1))
+  line.setAttribute('class', 'gap-line')
+  group.appendChild(line)
+
+  // Päätyportit merkitään erikseen: juuri niihin täyttö tai piirto kiinnittyy.
+  for (const point of [gap.start, gap.end]) {
+    const circle = document.createElementNS(SVG_NS, 'circle')
+    circle.setAttribute('cx', point.x.toFixed(1))
+    circle.setAttribute('cy', point.y.toFixed(1))
+    circle.setAttribute('r', '22')
+    circle.setAttribute('class', 'gap-end')
+    group.appendChild(circle)
+  }
+  return group
 }
 
 export function buildAreaShape(area: AreaShape): SVGPolygonElement {
