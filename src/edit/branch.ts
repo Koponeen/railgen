@@ -111,11 +111,13 @@ export interface RunInsertion {
 export interface BranchAnchor {
   /**
    * Mistä haara lähtee: suoralle upotetusta vaihteesta (`run`), haaroittavaksi
-   * vaihdetusta kaaresta (`swap`) vai radan omasta avoimesta päästä (`end`).
-   * Viimeinen ei ole haara lainkaan vaan jatko — se ei lisää vaihdetta, koska
-   * kiskonpäähän ei tarvita sellaista.
+   * vaihdetusta kaaresta (`swap`), radan omasta avoimesta päästä (`end`) vai ei
+   * mistään (`loose`). Kolmas ei ole haara vaan jatko — kiskonpäähän ei tarvita
+   * vaihdetta. Neljäs ei liity rataan lainkaan: se on viimeinen keino, jolla
+   * piirretty viiva saa palat allensa silloinkin kun mikään ei kiinnity
+   * (README luku 0).
    */
-  kind: 'run' | 'swap' | 'end'
+  kind: 'run' | 'swap' | 'end' | 'loose'
   junctionId: string
   portId: string
   /** Avoin haaraportti — uusi ketju lähtee tästä. */

@@ -166,6 +166,18 @@ Kolmas lattiatesti. Neljä havaintoa, neljä eri syytä.
 - **Kohtisuora haara sai mutkan.** `T` sai risteyksen sakon, vaikka se on yhden haaran vaihde. Sakko rajattiin aitoihin risteyksiin.
 - **Commit**: `Give each section action its own condition`
 
+### Vaihe 9 — Pääperiaate kirjattuna ja toteutettuna *(Opus)*
+
+Omistaja tiivisti tavoitteen säännöksi, joka voittaa muut: **jos käyttäjä piirtää jotain johonkin, se on toteutettava jotenkin.** Tekemättä ei jätetä ehdottamatta jotain; käyttäjä suodattaa itse onko ehdotuksessa järkeä. Työkalu tekee mallia junaradasta leikkejä varten, ei tarkista sääntöjä.
+
+- Periaate on nyt README luku 0, ennen ydinideoita — se on ylin sääntö, ei yksityiskohta.
+- Keinojen järjestys parhaimmasta huonoimpaan on sekin kirjattu: tee pyydetty → tee osa siitä → tee se toisin → tee se irrallaan.
+- **Irrallinen rata** toteuttaa viimeisen portaan: kun mikään ei kiinnity, palat menevät lattialle viivan alle ilman liitosta. Se ei mene päällekkäin muun radan kanssa eikä koskaan syrjäytä kiinnittyvää vaihtoehtoa.
+- Periaatteesta seuraa myös, ettei irrallisuutta tarvitse pelätä: poisto saa jättää haaran roikkumaan ja vaihto katkaista liitoksen. Kiellettyä on vain valehteleva kirjanpito.
+- **Commit**: `Always answer a stroke with something`
+
+**Kesken:** sama periaate ei vielä päde palan vaihtoon eikä osuuden vaihtoehtoihin — kummankin tyhjä vastaus on yhä mahdollinen. Ne ovat seuraava vaihe.
+
 Jokainen vaihe on itsenäisesti julkaistava, ja rata on joka välivaiheessa ehjä — epäonnistunut mutaatio tai sovitus ei koskaan jätä rikkinäistä tilaa näkyviin.
 
 ### Haiku — jatkuvat tehtävät

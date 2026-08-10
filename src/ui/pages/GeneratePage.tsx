@@ -358,8 +358,8 @@ function describeEdit(edited: EditState): string {
       change: describeChange(edited),
     })
   }
-  if (edited.kind === 'branch' || edited.kind === 'continue') {
-    return t(edited.kind === 'continue' ? 'branch.continued' : 'branch.added', {
+  if (edited.kind === 'branch' || edited.kind === 'continue' || edited.kind === 'loose') {
+    return t(`branch.${edited.kind === 'continue' ? 'continued' : edited.kind === 'loose' ? 'loosened' : 'added'}`, {
       pieces: formatNumber(edited.pieceCount),
       length: formatMetres(edited.track.lengthMm),
       change: describeChange(edited),

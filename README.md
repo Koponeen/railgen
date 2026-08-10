@@ -8,6 +8,40 @@ Toteutuksen tila ja vaiheistus: ks. **Kehitys** tämän dokumentin lopussa ja
 
 ---
 
+## 0. Pääperiaate: piirretty on aina toteutettava
+
+Tämä on työkalu **junaratamallin tekemiseen leikkejä varten**, ei
+tarkistuskone. Siitä seuraa yksi sääntö, joka voittaa muut:
+
+> **Jos käyttäjä piirtää jotain johonkin, se on toteutettava jotenkin.** Jos
+> ilmiselvää ratkaisua ei ole, tarjotaan vaihtoehtoja. Tekemättä ei jätetä
+> ehdottamatta **jotain**.
+
+Sama koskee palan vaihtoa ja osuuden vaihtoehtoja: tyhjä vastaus ei ole
+vastaus. **Käyttäjä suodattaa itse, onko ehdotuksessa järkeä** — hän näkee
+kartalta yhdellä silmäyksellä sen mitä algoritmi ei tiedä.
+
+Vastaus saa siis olla vajaa, kallis tai ruma, kunhan se on rehellinen ja
+näkyvissä. Käytännön keinot parhaimmasta huonoimpaan:
+
+1. **Tee se mitä pyydettiin.**
+2. **Tee osa siitä** — haara, joka pysähtyy ennen estettä (`docs/BRANCHING.md`).
+3. **Tee se toisin** — lähin mahdollinen haarakohta, toinen risteämän ratkaisu.
+4. **Tee se irrallaan** — palat lattialle siihen mihin viiva piirrettiin, ilman
+   liitosta. Irrallinen rata on lattialla arkipäivää, ja sen saa kiinni
+   piirtämällä sen päästä.
+
+Vasta kun mikään näistä ei tuota mitään, kerrotaan syy — ja silloinkin syyn on
+oltava mitattu tosiasia eikä algoritmin väsähdys.
+
+Tästä seuraa myös, ettei rikkinäisyyttä tarvitse pelätä samalla tavalla kuin
+generoinnissa: **irralliset osuudet ovat sallittuja**. Poisto saa jättää haaran
+roikkumaan ja vaihto katkaista liitoksen, koska niin kävisi lattiallakin.
+Kiellettyä on vain valehteleva kirjanpito: liitos, jota ei ole, ei saa jäädä
+tietoihin.
+
+---
+
 ## 1. Ydinideat tiivistettynä
 
 1. **Kaikki laskenta selaimessa.** Generointi, sovitus, törmäystarkistus ja piirto ovat kevyttä geometriaa — palvelin ei generoi mitään.

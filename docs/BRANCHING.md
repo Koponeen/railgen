@@ -240,6 +240,25 @@ risteämän molemmin puolin, yhteensä vähintään mäkielementin mitta (684 ta
 päätä, siltaa ei tarjota. Se ei ole algoritmin puute vaan lattialla mitattava
 tosiasia, ja käyttäjälle sanotaan se sellaisenaan.
 
+### Irrallinen rata: viimeinen keino
+
+README luku 0: piirretty on toteutettava jotenkin. Kun mikään ei kiinnity — ei
+haarakohtaa, ei jatkoa, ei risteystä, ei tynkää — palat menevät silti lattialle
+viivan alle **ilman liitosta**. Irrallinen rata on lattialla arkipäivää, ja sen
+saa kiinni piirtämällä sen päästä (luku 0 tässä dokumentissa) tai poistettua
+valitsemalla.
+
+Kaksi ehtoa pitää sen rehellisenä:
+
+- **Se ei mene päällekkäin muun radan kanssa.** Kaksi lautaa samassa kohdassa ei
+  ole vastaus vaan sotku, joten irrallinen rata aloitetaan vasta siitä mistä
+  lattia on vapaa. Veto alkaa radan vierestä — siitähän se tulkittiin haaraksi —
+  joten sen alku katkaistaan. Katkaisu tehdään murtoviivaa pitkin eikä pisteitä
+  suodattamalla: siivottu veto on vain muutama piste, ja alkupisteen
+  poistaminen veisi koko viivan.
+- **Se häviää kaikelle muulle.** Kustannus on niin suuri, ettei se koskaan
+  syrjäytä kiinnittyvää vaihtoehtoa.
+
 ### Tynkä: kun kumpikaan vastaus ei mahdu
 
 Jos ylitykselle ei löydy risteystä eikä siltaa — esimerkiksi kokoelmasta

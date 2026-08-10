@@ -135,13 +135,16 @@ describe('extendTrack', () => {
     expect(result.reason).toBe('drawing-too-short')
   })
 
-  it('says so when the collection has no switch at all', () => {
+  it('lays the pieces loose when the collection has no switch at all', () => {
+    // README luku 0: piirretty on toteutettava jotenkin. Ilman vaihdetta haaraa
+    // ei voi kiinnittää, mutta palat menevät silti sinne minne viiva piirrettiin.
     const track = buildLoop()
     const result = extendTrack(track, sideBranch(track), {
       area: AREA,
       inventory: createInventory({ D: 20, A: 4, A1: 4, A2: 4, E: 12 }),
     })
-    expect(result.reason).toBe('no-branch-point')
+    expect(result.reason).toBe('ok')
+    expect(result.options[0].kind).toBe('loose')
   })
 
   it('stays inside the collection when it can', () => {
@@ -411,6 +414,48 @@ describe('extendTrack back onto the track', () => {
     const pieces = track.pieces.length
     extendTrack(track, loopBranch(track), { area: AREA })
     expect(track.pieces).toHaveLength(pieces)
+  })
+})
+
+describe('extendTrack always answers with something', () => {
+  /**
+   * README luku 0: piirretty on toteutettava jotenkin. Kun mikään ei kiinnity,
+   * palat menevät lattialle viivan alle irrallisena ratana — käyttäjä näkee
+   * mihin hänen viivastaan tuli rataa ja saa sen kiinni piirtämällä sen päästä.
+   */
+  it('lays loose track when no switch fits anywhere', () => {
+    const track = buildLoop()
+    // Kokoelmassa ei ole yhtään vaihdetta, joten haarakohtaa ei ole olemassa.
+    const result = extendTrack(track, sideBranch(track), {
+      area: AREA,
+      inventory: createInventory({ D: 40, A: 8, A1: 8, A2: 8, E: 20, E1: 8 }),
+    })
+
+    expect(result.reason).toBe('ok')
+    expect(result.options.length).toBeGreaterThan(0)
+    expect(result.options[0].kind).toBe('loose')
+    expect(result.options[0].pieceCount).toBeGreaterThan(0)
+  })
+
+  it('keeps loose track honest: nothing is joined and nothing overlaps', () => {
+    const track = buildLoop()
+    const [option] = extendTrack(track, sideBranch(track), {
+      area: AREA,
+      inventory: createInventory({ D: 40, A: 8, A1: 8, A2: 8, E: 20, E1: 8 }),
+    }).options
+
+    // Irrallinen rata ei liity mihinkään: sen paloilla ei ole liitosta muuhun.
+    const loose = new Set(option.addedIndices)
+    for (const [a, b] of option.track.joints) {
+      expect(loose.has(a)).toBe(loose.has(b))
+    }
+    expectIntact(track, option)
+  })
+
+  it('prefers anything attached over loose track', () => {
+    const track = buildLoop()
+    const result = extendTrack(track, sideBranch(track), { area: AREA })
+    expect(result.options.every((option) => option.kind !== 'loose')).toBe(true)
   })
 })
 

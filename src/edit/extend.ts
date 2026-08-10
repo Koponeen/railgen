@@ -142,6 +142,16 @@ const REJOIN_BONUS = 900
 /** Kuinka kauas ennen rataa tynkähaara pysäytetään. */
 const STUB_CLEARANCE_MM = TRACK_WIDTH_MM * 3
 
+/**
+ * Irrallinen rata on viimeinen keino, joten sen on hävittävä kaikelle muulle.
+ * Se ei silti ole kielto vaan vastaus: käyttäjä näkee mihin hänen viivastaan
+ * tuli rataa, ja saa sen kiinni piirtämällä sen päästä (README luku 0).
+ */
+const LOOSE_COST = 100000
+
+/** Irrallinen rata alkaa vasta täältä: kaksi lautaa ei mahdu samaan kohtaan. */
+const LOOSE_CLEARANCE_MM = TRACK_WIDTH_MM * 1.5
+
 /** Voittaja on selvä, jos se on tämän verran halvempi kuin seuraava. */
 const AUTO_MARGIN = 0.7
 
@@ -219,6 +229,7 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
     findAnchors(track, library, table, inventory, points[0], snapMm) ||
     findAnchors(track, library, table, inventory, points[0], snapMm * FALLBACK_SNAP_FACTOR)
   if (!anchors) {
+    if (built.length === 0) built.push(...looseOptions(context, points))
     if (built.length === 0) return failure('no-branch-point')
     return { options: rank(built, options.maxOptions ?? 3), reason: 'ok', automatic: true }
   }
@@ -283,6 +294,9 @@ export function extendTrack(track: Track, rawPoints: readonly Vec[], options: Ex
     else firstReason = 'crossing-unresolved'
   }
 
+  // Mikään ei kiinnittynyt. Piirretty on silti toteutettava jotenkin, joten
+  // palat menevät lattialle viivan alle irrallisena ratana (README luku 0).
+  if (built.length === 0) built.push(...looseOptions(context, points))
   if (built.length === 0) return failure(firstReason ?? 'no-fit')
 
   const ranked = rank(built, options.maxOptions ?? 3)
@@ -490,6 +504,77 @@ function backwardOptions(context: Context, points: readonly Vec[], snapMm: numbe
     }
   }
   return results
+}
+
+/**
+ * Viimeinen keino: palat piirretyn viivan alle **ilman liitosta**. Käyttäjä
+ * piirsi jotain johonkin, joten jotain on tehtävä (README luku 0) — ja
+ * irrallinen rata on lattialla arkipäivää. Sen saa kiinni piirtämällä sen
+ * päästä, tai poistettua valitsemalla.
+ *
+ * Tämä ei silti saa mennä päällekkäin muun radan kanssa: kaksi lautaa samassa
+ * kohdassa ei ole vastaus vaan sotku, ja `attach` hylkää törmäykset.
+ */
+function looseOptions(context: Context, points: readonly Vec[]): BranchOption[] {
+  const { track, library } = context
+
+  // Veto alkaa radan vierestä — siitähän se tulkittiin haaraksi — joten sen
+  // alku on radan päällä. Irrallinen rata aloitetaan vasta siitä mistä lattia
+  // on vapaa, muuten kaksi lautaa osuisi samaan kohtaan.
+  const clear = trimNearTrack(points, track, library)
+  if (!clear) return []
+
+  for (const fit of fitLeg(context, track.pieces, null, clear, null).slice(0, MAX_FITS)) {
+    const attached = attach(context, looseAnchor(track), [{ pieces: fit.pieces }], {
+      crossing: 'none',
+      crossingId: null,
+      deviation: fit.deviation,
+      extraCost: fit.cost + LOOSE_COST,
+    })
+    if (attached.option) return [attached.option]
+  }
+  return []
+}
+
+/**
+ * Viiva siitä kohdasta alkaen, jossa se irtoaa radasta. Siivottu veto on vain
+ * muutama piste, joten pisteiden suodattaminen veisi koko viivan — murtoviiva
+ * on katkaistava ja katkaisukohta laskettava.
+ */
+function trimNearTrack(points: readonly Vec[], track: Track, library: PieceLibrary): Vec[] | null {
+  const STEP_MM = 15
+  for (let i = 1; i < points.length; i += 1) {
+    const from = points[i - 1]
+    const to = points[i]
+    const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / STEP_MM))
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps
+      const at: Vec = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t }
+      if (distanceToTrack(at, track, library) <= LOOSE_CLEARANCE_MM) continue
+      const rest = [at, ...points.slice(i)]
+      return polylineLength(rest) >= MIN_LEG_MM ? rest : null
+    }
+  }
+  return null
+}
+
+/** Pseudohaarakohta tyhjään: ei palaa, ei porttia, ei liitosta. */
+function looseAnchor(track: Track): BranchAnchor {
+  return {
+    kind: 'loose',
+    junctionId: '',
+    portId: '',
+    frame: { x: 0, y: 0, dir: 0, level: 0, open: 'pin' },
+    pieces: [...track.pieces],
+    joints: track.joints.map(([a, b]) => [a, b] as [number, number]),
+    junctionIndex: 0,
+    gapMm: 0,
+    localJoints: [],
+    added: {},
+    removed: {},
+    offsetMm: 0,
+    cost: 0,
+  }
 }
 
 /** Pseudohaarakohta radan päähän: jatko ei lisää vaihdetta eikä muuta rataa. */
