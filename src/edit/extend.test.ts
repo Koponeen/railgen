@@ -231,6 +231,43 @@ describe('extendTrack across the track', () => {
     for (const option of result.options) expectIntact(track, option)
   })
 
+  it('answers a stroke drawn diagonally across the loop with a crossing', () => {
+    // Vinosti vedetty viiva ylittää radan yhtä lailla kuin kohtisuora, mutta
+    // sovituksen ketjut päätyvät eri kohtiin ja osa niistä sipaisee matkalla
+    // mutkaa. Ennen ensimmäinen ketju sai vetää koko kysymyksen pois — kaksi
+    // kosketusta jätetään tarkoituksella ratkaisematta — ja vastaukseksi jäi
+    // radan viereen pysähtyvä haara.
+    const track = buildLoop()
+    const result = extendTrack(track, stroke({ x: 1100, y: 500 }, { x: 500, y: 1850 }, 40), {
+      area: AREA,
+      maxOptions: 3,
+    })
+
+    expect(result.reason).toBe('ok')
+    expect(result.options.some((option) => option.crossing !== 'none')).toBe(true)
+  })
+
+  it('never lets a branch that stops short outrank one that goes over', () => {
+    // README luku 0: "tee se mitä pyydettiin" ja "tee se toisin" ovat kumpikin
+    // vajaan vastauksen edellä. Tynkä on lyhyempi ja siksi halvempi sovittaa —
+    // ilman sakkoa se voitti risteämän tekemällä vähemmän.
+    const track = buildLoop()
+    const tip = tipOf(track, 1)
+    const result = extendTrack(track, stroke(tip, { x: tip.x, y: 2070 }, 40), { area: AREA, maxOptions: 4 })
+
+    const stub = result.options.findIndex((option) => option.variant === 'stub')
+    const crossing = result.options.findIndex((option) => option.crossing !== 'none')
+    expect(crossing).toBeGreaterThanOrEqual(0)
+    if (stub >= 0) expect(crossing).toBeLessThan(stub)
+  })
+
+  it('offers the stub once: which switch starts it does not make it another answer', () => {
+    const track = buildLoop()
+    const tip = tipOf(track, 1)
+    const result = extendTrack(track, stroke(tip, { x: tip.x, y: 2070 }, 40), { area: AREA, maxOptions: 4 })
+    expect(result.options.filter((option) => option.variant === 'stub').length).toBeLessThanOrEqual(1)
+  })
+
   it('keeps the branch connected end to end through the crossing', () => {
     const track = buildLoop()
     const level = extendTrack(track, crossingBranch(track), { area: AREA, maxOptions: 4 }).options.find(

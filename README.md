@@ -295,8 +295,12 @@ Toteutusvaiheet, ks. `docs/IMPLEMENTATION_PLAN.md`:
   rataa eikä haaroita, poisto radan päästä toteutuu suoraan ja keskelle jäävän aukon saa
   jättää auki; mutkittelevalle osuudelle tarjotaan suoraa. Ks. `docs/EDITING.md`,
   `docs/VARIATIONS.md` ja `docs/BRANCHING.md`.
+- **Vaihe 8** (lattiatestin kaksi vikaa): haamun napautus ratkeaa geometriasta eikä
+  piirtojärjestyksestä — nimilappu ja rata ovat nyt aina sama vaihtoehto — ja radan
+  yli piirretty veto saa risteämän myös silloin kun sovituksen ketju sipaisee matkalla
+  jotain. Vajaa vastaus ei enää voita täyttä. Ks. `docs/UI.md` ja `docs/BRANCHING.md`.
 
-Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2–7 tuovat piirron,
+Vaihe 1 on tässä valmis ja julkaisukelpoinen sellaisenaan; vaiheet 2–8 tuovat piirron,
 muokkauksen ja autosolverin sen päälle.
 
 Palakirjasto kattaa suorat sukupuolivariantteineen, kaaret, rampit, sillan kannet,

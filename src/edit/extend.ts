@@ -143,6 +143,20 @@ const REJOIN_BONUS = 900
 const STUB_CLEARANCE_MM = TRACK_WIDTH_MM * 3
 
 /**
+ * Tynkä on **vajaa vastaus**: se toteuttaa vedosta sen osan, joka on
+ * toteutettavissa, ja jättää loput tekemättä. README luku 0 asettaa keinot
+ * järjestykseen — "tee se mitä pyydettiin" ja "tee se toisin" ovat kumpikin
+ * tyngän edellä — joten tyngän on hävittävä jokaiselle vastaukselle, joka vie
+ * viivan perille asti.
+ *
+ * Ilman tätä tynkä voitti risteämän, koska se on lyhyempi: sovituksen hinta
+ * kasvaa palojen mukana, ja vähemmän tekevä vastaus tuli siten halvemmaksi.
+ * Sakko on silti paljon irrallista rataa pienempi, koska tynkä on kiinni
+ * radassa.
+ */
+const STUB_COST = 5000
+
+/**
  * Irrallinen rata on viimeinen keino, joten sen on hävittävä kaikelle muulle.
  * Se ei silti ole kielto vaan vastaus: käyttäjä näkee mihin hänen viivastaan
  * tuli rataa, ja saa sen kiinni piirtämällä sen päästä (README luku 0).
@@ -676,17 +690,33 @@ function arrivalAt(frame: Frame): Frame {
 
 // --- Risteämän ratkaisu ------------------------------------------------------
 
-/** Ensimmäinen ketju, joka ylittää vanhan radan, ja sen ylitykset. */
+/**
+ * Ketju, joka ylittää vanhan radan, ja sen ylitykset.
+ *
+ * Sovitus palauttaa monta lähes samanarvoista ketjua, ja ne ylittävät radan
+ * hieman eri kohdista — yksi menee siististi poikki, toinen sipaisee matkalla
+ * mutkaa. "Useampi ylitys yhdellä vedolla jätetään ratkaisematta" on sääntö
+ * sille mitä *käyttäjä piirsi*, ei sille kumman ketjun keila sattui
+ * palauttamaan ensimmäisenä. Siksi ratkaistavaksi otetaan **se ketju, jonka
+ * ylityskuva on selvin**: yksi ylitys voittaa kaksi.
+ *
+ * Ilman tätä yksi sipaisu vei koko risteämävastauksen, ja käyttäjä sai tilalle
+ * radan viereen pysähtyvän haaran.
+ */
 function firstCrossing(
   context: Context,
   anchor: BranchAnchor,
   fits: readonly BeamFit[],
 ): { fit: BeamFit; sites: CrossingSite[] } | null {
+  let fallback: { fit: BeamFit; sites: CrossingSite[] } | null = null
+
   for (const fit of fits) {
     const sites = findCrossings(anchor.pieces, fit.pieces, context.library, [[anchor.junctionIndex, 0]])
-    if (sites.length > 0) return { fit, sites }
+    if (sites.length === 0) continue
+    if (sites.length === 1) return { fit, sites }
+    fallback ??= { fit, sites }
   }
-  return null
+  return fallback
 }
 
 /**
@@ -704,7 +734,7 @@ function stubOption(context: Context, anchor: BranchAnchor, points: readonly Vec
       crossingId: null,
       variant: 'stub',
       deviation: fit.deviation,
-      extraCost: fit.cost,
+      extraCost: fit.cost + STUB_COST,
     })
     if (attached.option) return attached.option
   }
@@ -921,10 +951,16 @@ function rank(options: readonly BranchOption[], limit: number): BranchOption[] {
       // Risteämässä kysymys on "yli vai poikki", ei se mikä vaihde haaran
       // aloittaa: kolme tasoristeystä eri vaihteilla on yksi vastaus kolmesti,
       // ja se työntäisi sillan — toisen aidon vastauksen — kokonaan pois.
+      //
+      // Sama koskee tynkää: "haara pysähtyy ennen rataa" on yksi vastaus, ja
+      // se mistä vaihteesta se lähtee ei tee siitä toista. Kaksi tynkää
+      // kartalla veisi tilan aidoilta vastauksilta.
       const key =
-        option.crossing === 'none'
-          ? `${option.junctionId}|${option.kind}|${option.variant}|${option.rejoinId ?? ''}|none`
-          : `${option.crossing}|${option.crossingId ?? ''}`
+        option.variant === 'stub'
+          ? 'stub'
+          : option.crossing === 'none'
+            ? `${option.junctionId}|${option.kind}|${option.variant}|${option.rejoinId ?? ''}|none`
+            : `${option.crossing}|${option.crossingId ?? ''}`
       if (seen.has(key)) return false
       seen.add(key)
       return true

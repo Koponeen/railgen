@@ -13,6 +13,7 @@ pages/GeneratePage   sivu 3: kartta + generoi uudelleen + piirto + siemen
 pages/ResultPage     sivu 4: kartta, mitat, osaluettelo, PNG, tulostus, jako
 TrackMap.tsx         Preact-kääre imperatiiviselle kartalle
 mapEngine.ts         kartan tila, eleet ja piirto (Preactin ulkopuolella)
+ghosts.ts            kumpaa haamua napautus tarkoitti
 drawing.ts           piirretyn radan tila ja virheilmoitukset
 components.tsx       stepper, valinta, kytkin, kortti, toimintorivi
 ```
@@ -78,6 +79,38 @@ sormimitoituksen minimi. Suhdeluku oli aluksi kaksinkertainen, jolloin nuppi oli
 halkaisijaltaan ~88 px ja peitti puolet valitusta osuudesta. Osuma-alue on
 nuppia reilusti isompi eikä sitä pienennetty, joten pienempi nuppi ei tee
 osumisesta vaikeampaa — se vain päästää näkemään mihin osui.
+
+## Haamun napautus: geometria ratkaisee, ei piirtojärjestys
+
+Kartalla oleva kysymys on 2–3 haamua, ja ne ovat **päällekkäin**: vaihtoehdot
+lähtevät samasta kohdasta rataa, täyttävät saman osuuden uudelleen ja eroavat
+vasta myöhemmin. Osumapolku on sormea varten leveä (90 mm), joten haamujen
+osuma-alueet peittävät toisensa laajalti.
+
+Siitä syntyi vika, joka nähtiin lattialla: **nimilappu lupasi `T`:n ja radalle
+tuli `L`/`M`.** Napautus ratkaistiin `document.elementFromPoint`illa, joka
+palauttaa *päällimmäisen* elementin — eli aina viimeksi piirretyn haamun, ei
+sitä johon sormi osoitti. Vaihtoehdon tunnus ja sen rata olivat siis koko ajan
+samasta lähteestä; väärä oli se, mikä vaihtoehto ylipäätään valittiin.
+
+Mitattuna: `extendTrack` ei tuota yhtäkään vaihtoehtoa, jonka `junctionId` ei
+esiintyisi sen oman radan `added`-listassa — se hypoteesi ei siis pitänyt.
+
+Vastaus mitataan nyt geometriasta (`ghosts.ts`), ja mitataan siitä osasta, jonka
+perusteella vaihtoehdot ylipäätään eroavat toisistaan:
+
+1. **Numerolappu voittaa.** Se on tähtäyspiste, ja se piirretään omana
+   kerroksenaan kaikkien haamujen päälle — muuten alemman haamun lappu jäisi
+   ylemmän osumapolun alle eikä siihen voisi osua lainkaan.
+2. **Muuten lähin *erottava* pala.** Jaetut palat (täsmälleen sama sijoitus
+   toisessa haamussa) jätetään pois: niiden napautus ei tarkoita yhtä
+   vaihtoehtoa toisen sijaan.
+3. **Tasapeliä ei arvata.** Jos kaksi haamua on yhtä lähellä tai sormi osui
+   jaettuun osaan, kysymys jää auki — napautus ei ollut valinta muttei myöskään
+   peruutus. Vasta haamujen ohi osunut napautus peruu kysymyksen.
+
+Vaihtoehdot ovat yhä myös toimintorivin nappeina, joten valinta ei ole koskaan
+kiinni tähtäämisestä.
 
 ## Pyöritys on esitystason asia
 

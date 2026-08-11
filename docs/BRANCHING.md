@@ -362,6 +362,56 @@ nimilappu kertoo suoraan mistä on kyse ("Haara ennen rataa").
 
 Vasta jos tynkäkään ei mahdu, kerrotaan syy.
 
+#### Tynkä on viimeinen vastaus, ei halvin
+
+Tyngällä on kaksi ominaisuutta, jotka tekivät siitä liian hyvän: se on
+**lyhyempi** ja siksi halvempi sovittaa, ja sitä syntyi **yksi jokaisesta
+vaihteesta**. Yhdessä ne nostivat sen kärkeen ja veivät kartalta paikat aidoilta
+vastauksilta — veto, joka meni 300 mm radan yli, sai vastaukseksi kaksi tynkää
+ja vasta kolmantena risteyksen.
+
+README luku 0 asettaa keinot järjestykseen: "tee se mitä pyydettiin" ja "tee se
+toisin" ovat kumpikin vajaan vastauksen edellä. Kaksi korjausta panevat tyngän
+sinne minne se kuuluu:
+
+- **Sakko (`STUB_COST`)**, joka pitää sen jokaisen perille asti vievän
+  vastauksen takana. Se on silti paljon irrallista rataa pienempi, koska tynkä
+  on kiinni radassa.
+- **Yksi tynkä riittää.** "Haara pysähtyy ennen rataa" on yksi vastaus, eikä se
+  mistä vaihteesta se lähtee tee siitä toista — sama sääntö kuin risteämällä jo
+  oli.
+
+### Mitattu: mikä oikeasti esti risteämän
+
+Havainto lattialta oli, että **veto meni radan yli mutta risteystä ei tullut**,
+ja epäilty syy oli tunnistuskynnys: risteämä lasketaan `TRACK_WIDTH_MM * 0.9`:n
+päästä keskilinjasta, ja sormella piirretty viiva ei osu keskilinjaan.
+
+Kynnys mitattiin: se **ei ollut syy.** Kokeiltiin 120 sormella piirretyn
+kaltaista vetoa (värinä 0–60 mm, päätepiste 0–200 mm radan yli) ja nostettiin
+kynnys laudan leveydestä sormen tarkkuuteen (`TRACK_WIDTH_MM * 1.5`, lisäksi
+ehto että radat kulkevat toistensa poikki eivätkä rinnakkain). Tulos parani
+yhdellä vedolla 120:stä. Kynnyksen nosto myös *heikensi* tulosta yksinään
+(51 → 36), koska se tuotti lisää kosketuksia ja useampi ylitys jätetään
+tarkoituksella ratkaisematta. Hypoteesi hylättiin ja kynnys jäi laudan
+leveyteen.
+
+Todelliset syyt olivat kaksi, ja kumpikin oli **järjestyksessä eikä
+mittauksessa**:
+
+1. **Tynkä voitti** halpuudellaan (yllä).
+2. **Ensimmäinen sovitettu ketju sai vetää koko kysymyksen pois.** Keila
+   palauttaa monta lähes samanarvoista ketjua, ja ne ylittävät radan hieman eri
+   kohdista: yksi menee siististi poikki, toinen sipaisee matkalla mutkaa.
+   Risteämä ratkaistiin ensimmäisestä ketjusta, ja jos juuri se sipaisi, sillä
+   oli kaksi kosketusta — ja kahta ylitystä ei ratkaista. Sääntö on tarkoitettu
+   sille mitä *käyttäjä piirsi*, ei sille kumman ketjun keila sattui
+   palauttamaan ensin. Nyt ratkaistavaksi otetaan se ketju, jonka ylityskuva on
+   selvin: yksi ylitys voittaa kaksi.
+
+Yhdessä nämä nostivat risteämävastauksen 51:stä 59:ään samasta 120 vedosta.
+Loput ovat aitoja rajoja: risteyspala tai silta ei yksinkertaisesti mahdu.
+
 ## 4. Valinta: milloin kysytään ja milloin ei
 
 README luku 5: "Jos yksi voittaa selvästi → automaattinen; muuten
@@ -414,23 +464,19 @@ haaran saa nyt myös purkaa valitsemalla sen osioksi. Paluu käy yhä myös
 generoimalla uudelleen — generoitu, piirretty ja muokattu rata elävät
 rinnakkain kuten ennenkin.
 
-Yhä auki:
+Ratkaistu sen jälkeen kun tämä kirjattiin:
 
-- **Nimilappu lupaa `T`:n mutta radalle tulee `L`/`M`.** Havaittu lattialla,
-  toistamatta. Nimilappu tulee `option.junctionId`:stä ja rata samasta
-  `option.track`:stä, joten niiden *pitäisi* olla samasta ankkurista — mismatch
-  tarkoittaa, että jossain kohtaa vaihtoehdon tunnus ja sen rata ovat eri
-  lähteistä. Ensimmäinen mitattava: tuottaako `extendTrack` vaihtoehdon, jonka
-  `junctionId` ei esiinny sen oman radan `added`-listassa. Se on aito
-  laatuvirhe: käyttöliittymä ei saa luvata yhtä ja tehdä toista.
-- **Pari milliä ohi, ja risteys jää tekemättä.** Veto ohitti radan hitusen
-  väärältä puolelta, jolloin ylitystä ei tunnistettu ja haarasta tuli tynkä.
-  Nappaus ja aikomuksen tulkinta ovat tässä liian tarkkoja: risteämän
-  tunnistuskynnys on `TRACK_WIDTH_MM * 0.9` keskilinjojen väliltä
-  (`crossing.ts`), eli veto lasketaan ylitykseksi vasta kun se osuu lähes
-  keskilinjaan. Sormella piirretty viiva ei osu. Kynnys pitää mitata sormen
-  tarkkuudella eikä laudan leveydellä, ja lisäksi: kun veto päättyy radan
-  *viereen*, aikomus on lähes aina joko ylitys tai liitos — ei tynkä.
+- **Nimilappu lupasi `T`:n mutta radalle tuli `L`/`M`.** Vika ei ollut haaran
+  koneistossa vaan siinä, miten haamun napautus ratkaistiin: `elementFromPoint`
+  antaa päällimmäisen elementin, eli aina viimeksi piirretyn haamun. Mitattuna
+  `extendTrack` ei tuota yhtäkään vaihtoehtoa, jonka `junctionId` puuttuisi sen
+  oman radan `added`-listasta — epäilty syy oli siis väärä. Napautus ratkeaa nyt
+  geometriasta (`docs/UI.md`).
+- **Pari milliä ohi, ja risteys jää tekemättä.** Kynnys mitattiin eikä se ollut
+  syy; tynkä voitti halpuudellaan ja yksi sipaisu vei koko kysymyksen. Ks.
+  "Mitattu: mikä oikeasti esti risteämän" yllä.
+
+Yhä auki:
 
 - **`T` molempiin päihin.** Omistajan linjaus: kohtisuoraan vedetty viiva saa
   oletuksena `T`:n kumpaankin päähän, ja jos ketjuun tarvitaan väliin

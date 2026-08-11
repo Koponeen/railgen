@@ -3,7 +3,7 @@ import { unionBBox, type BBox } from '../core/path'
 import { placedBBox } from '../core/pieces'
 import { CELL_MM } from '../core/units'
 import type { AreaShape } from '../gen/mask'
-import { buildAreaShape, buildGapMark, buildGhostGroup, buildTrackGroup } from './trackSvg'
+import { buildAreaShape, buildGapMark, buildGhostGroup, buildGhostTag, buildTrackGroup } from './trackSvg'
 import type { AppState, Point, ViewTransform } from './state'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -74,7 +74,14 @@ export function render(world: SVGGElement, state: AppState, draft: Point[] | nul
   // Haamut radan päälle: ne ovat vaihtoehtoja, joita ei ole vielä olemassa,
   // ja samalla napautuskohteita (README luku 6).
   for (const ghost of state.ghosts) {
-    world.appendChild(buildGhostGroup(ghost, library, state.rotated))
+    world.appendChild(buildGhostGroup(ghost, library))
+  }
+
+  // Numerolaput omana kerroksenaan haamujen päälle: vaihtoehdot ovat samassa
+  // kohdassa rataa, joten alemman haamun lappu jäisi ylemmän alle eikä siihen
+  // voisi osua lainkaan.
+  for (const ghost of state.ghosts) {
+    world.appendChild(buildGhostTag(ghost, state.rotated))
   }
 
   if (draft && draft.length >= 2) {

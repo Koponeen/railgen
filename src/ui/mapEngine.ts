@@ -2,6 +2,7 @@ import type { PieceLibrary } from '../core/library'
 import type { Track } from '../gen/build'
 import type { AreaShape } from '../gen/mask'
 import { GestureController } from './gestures'
+import { ghostAt } from './ghosts'
 import { applyView, fitView, render, selectionBBox, zoomToBBox } from './render'
 import {
   createInitialState,
@@ -103,17 +104,38 @@ export function mountMapEngine(
     }, 260)
   }
 
+  /** Näyttöpiste kartan maailmakoordinaatistoon (mm) nykyisellä pan/zoomilla. */
+  function clientToWorld(client: { clientX: number; clientY: number }): Point | null {
+    const ctm = world.getScreenCTM()
+    if (!ctm) return null
+    const point = svg.createSVGPoint()
+    point.x = client.clientX
+    point.y = client.clientY
+    const mapped = point.matrixTransform(ctm.inverse())
+    return { x: mapped.x, y: mapped.y }
+  }
+
   function handleTap(client: { clientX: number; clientY: number }): void {
+    // Kartalla oleva kysymys vastataan ennen kuin karttaa aletaan taas selata.
+    //
+    // Kumpi haamu sormen alla oli, **ei** ratkea DOM:sta: haamut piirretään
+    // päällekkäin samaan kohtaan rataa, joten `elementFromPoint` vastaisi aina
+    // viimeksi piirretty. Juuri siitä syntyi vika, jossa nimilappu lupasi
+    // yhden vaihteen ja radalle tuli toinen. Vastaus mitataan geometriasta
+    // (`ghosts.ts`).
+    if (state.ghosts.length > 0) {
+      const point = clientToWorld(client)
+      const hit = point ? ghostAt(state.ghosts, library, point) : ({ kind: 'miss' } as const)
+      // Jaettuun osaan osunut napautus ei ole valinta eikä peruutus: kysymys
+      // jää auki, ja käyttäjä osoittaa uudelleen tai käyttää toimintoriviä.
+      if (hit.kind === 'option') callbacks.onTapGhost?.(hit.index)
+      else if (hit.kind === 'miss') callbacks.onTapPiece?.(null)
+      return
+    }
+
     const element = document.elementFromPoint(client.clientX, client.clientY)
     if (!(element instanceof Element)) {
       callbacks.onTapPiece?.(null)
-      return
-    }
-    // Haamu on radan päällä ja voittaa siksi myös napautuksessa: kysymykseen
-    // vastataan ennen kuin karttaa aletaan taas selata.
-    const ghost = element.closest('[data-ghost-index]')?.getAttribute('data-ghost-index')
-    if (ghost !== null && ghost !== undefined) {
-      callbacks.onTapGhost?.(Number(ghost))
       return
     }
     const index = element.closest('[data-piece-index]')?.getAttribute('data-piece-index')

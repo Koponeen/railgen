@@ -86,7 +86,7 @@ function buildBuffer(segments: ReturnType<typeof placedSegments>): SVGLineElemen
  * haamu on samalla napautuskohde — leveä näkymätön osumapolku tekee siitä
  * sormella osuttavan.
  */
-export function buildGhostGroup(ghost: Ghost, library: PieceLibrary, rotated: boolean): SVGGElement {
+export function buildGhostGroup(ghost: Ghost, library: PieceLibrary): SVGGElement {
   const group = document.createElementNS(SVG_NS, 'g')
   group.setAttribute('class', 'ghost')
   group.setAttribute('data-ghost-index', String(ghost.index))
@@ -112,13 +112,19 @@ export function buildGhostGroup(ghost: Ghost, library: PieceLibrary, rotated: bo
     group.appendChild(groove)
   }
 
-  group.appendChild(buildGhostTag(ghost, rotated))
   return group
 }
 
-/** Numerolappu haamun päällä: kartta kertoo itse, monesko vaihtoehto tämä on. */
-function buildGhostTag(ghost: Ghost, rotated: boolean): SVGGElement {
+/**
+ * Numerolappu: kartta kertoo itse, monesko vaihtoehto tämä on. Laput
+ * piirretään omana kerroksenaan **kaikkien haamujen päälle** (`render.ts`),
+ * koska lappu on se mihin sormi tähtää — toisen haamun alle jäänyttä lappua ei
+ * voi napauttaa, ja juuri siitä syntyi vika, jossa lappu lupasi yhden vaihteen
+ * ja radalle tuli toinen (docs/BRANCHING.md).
+ */
+export function buildGhostTag(ghost: Ghost, rotated: boolean): SVGGElement {
   const tag = document.createElementNS(SVG_NS, 'g')
+  tag.setAttribute('data-ghost-index', String(ghost.index))
   // Kartta voi olla käännetty ruudulle sopimaan; numero ei saa kääntyä mukana.
   if (rotated) tag.setAttribute('transform', `rotate(-90 ${ghost.tag.x.toFixed(1)} ${ghost.tag.y.toFixed(1)})`)
   const circle = document.createElementNS(SVG_NS, 'circle')
